@@ -1,0 +1,18 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ScreenshotHelper.App.ViewModels"
+             x:Class="ScreenshotHelper.App.Views.SummaryView"
+             x:DataType="vm:SummaryViewModel">
+  <Grid Margin="24" RowDefinitions="Auto,Auto,*,Auto" MaxWidth="820">
+    <TextBlock Classes="h1" Text="{Binding Heading}" />
+    <TextBlock Grid.Row="1" Classes="muted" Margin="0,4,0,16" Text="{Binding Folder, StringFormat='in {0}'}" />
+    <Border Grid.Row="2" Classes="card" Padding="8">
+      <ListBox ItemsSource="{Binding Files}" AutomationProperties.Name="Screenshots saved in this session" />
+    </Border>
+    <StackPanel Grid.Row="3" Orientation="Horizontal" Spacing="10" Margin="0,16,0,0">
+      <Button Classes="primary" Content="New session" Command="{Binding NewSessionCommand}" IsDefault="True" />
+      <Button Content="Show in Explorer" Command="{Binding RevealCommand}" IsEnabled="{Binding HasFiles}" />
+      <Button Content="Renumber these…" Command="{Binding RenumberCommand}" IsEnabled="{Binding HasFiles}" />
+    </StackPanel>
+  </Grid>
+</UserControl>

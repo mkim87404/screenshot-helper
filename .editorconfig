@@ -1,0 +1,29 @@
+# Code style and analyzer configuration for the whole repo.
+root = true
+
+[*]
+charset = utf-8
+indent_style = space
+insert_final_newline = true
+trim_trailing_whitespace = true
+
+[*.{cs,axaml,xaml}]
+indent_size = 4
+
+[*.{csproj,props,targets,json,yml,yaml,slnx,manifest}]
+indent_size = 2
+
+[*.cs]
+csharp_style_namespace_declarations = file_scoped:warning
+dotnet_sort_system_directives_first = true
+
+# Test projects: xUnit's sentence-style names (Given_when_then) use underscores by convention.
+[tests/**.cs]
+dotnet_diagnostic.CA1707.severity = none
+# Tests intentionally pass literal strings and don't need ConfigureAwait (xUnit has no sync context deadlock).
+dotnet_diagnostic.CA2007.severity = none
+dotnet_diagnostic.CA1861.severity = none
+
+# View-models: XAML compiled bindings need instance members, even when a member's value doesn't depend on instance state.
+[src/ScreenshotHelper.App/ViewModels/**.cs]
+dotnet_diagnostic.CA1822.severity = none

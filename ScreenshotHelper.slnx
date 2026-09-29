@@ -1,0 +1,12 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ScreenshotHelper.App/ScreenshotHelper.App.csproj" />
+    <Project Path="src/ScreenshotHelper.Core/ScreenshotHelper.Core.csproj" />
+    <Project Path="src/ScreenshotHelper.Platform.Windows/ScreenshotHelper.Platform.Windows.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ScreenshotHelper.App.Tests/ScreenshotHelper.App.Tests.csproj" />
+    <Project Path="tests/ScreenshotHelper.Core.Tests/ScreenshotHelper.Core.Tests.csproj" />
+    <Project Path="tests/ScreenshotHelper.Platform.Windows.Tests/ScreenshotHelper.Platform.Windows.Tests.csproj" />
+  </Folder>
+</Solution>

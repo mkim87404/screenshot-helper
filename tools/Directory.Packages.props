@@ -1,0 +1,10 @@
+<Project>
+  <!--
+    Tools are standalone .NET file-based scripts (`dotnet run tools/<script>.cs`). Each script pins its own dependencies with
+    `#:package Name@Version` in its header, so central package management (root Directory.Packages.props) is turned off here.
+    tools/README.md lists every script's dependencies.
+  -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>false</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,140 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="ScreenshotHelper.App.App"
+             RequestedThemeVariant="Default"
+             Name="Screenshot Helper">
+
+  <!-- Colour tokens per theme. Text/background pairs meet WCAG AA contrast (≥ 4.5:1) in both themes. -->
+  <Application.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="PageBackground" Color="#F6F7FB" />
+          <SolidColorBrush x:Key="CardBackground" Color="#FFFFFF" />
+          <SolidColorBrush x:Key="CardBorder" Color="#E2E5EE" />
+          <SolidColorBrush x:Key="MutedText" Color="#4B5363" />
+          <SolidColorBrush x:Key="AccentText" Color="#4338CA" />
+          <SolidColorBrush x:Key="WarningText" Color="#8A4B00" />
+          <SolidColorBrush x:Key="WarningBackground" Color="#FFF4E0" />
+          <SolidColorBrush x:Key="ErrorText" Color="#B42318" />
+          <SolidColorBrush x:Key="ErrorBackground" Color="#FDECEA" />
+          <SolidColorBrush x:Key="SuccessText" Color="#146C43" />
+        </ResourceDictionary>
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="PageBackground" Color="#14161C" />
+          <SolidColorBrush x:Key="CardBackground" Color="#1D2029" />
+          <SolidColorBrush x:Key="CardBorder" Color="#2E3240" />
+          <SolidColorBrush x:Key="MutedText" Color="#A9B0BF" />
+          <SolidColorBrush x:Key="AccentText" Color="#A5B4FC" />
+          <SolidColorBrush x:Key="WarningText" Color="#FBBF5A" />
+          <SolidColorBrush x:Key="WarningBackground" Color="#3A2A0E" />
+          <SolidColorBrush x:Key="ErrorText" Color="#FF8A80" />
+          <SolidColorBrush x:Key="ErrorBackground" Color="#3B1614" />
+          <SolidColorBrush x:Key="SuccessText" Color="#6EE7A8" />
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+      <Color x:Key="SystemAccentColor">#4F46E5</Color>
+    </ResourceDictionary>
+  </Application.Resources>
+
+  <Application.Styles>
+    <FluentTheme />
+
+    <!-- Typography -->
+    <Style Selector="TextBlock.h1">
+      <Setter Property="FontSize" Value="24" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="TextBlock.h2">
+      <Setter Property="FontSize" Value="16" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Margin" Value="0,0,0,8" />
+    </Style>
+    <Style Selector="TextBlock.muted">
+      <Setter Property="Foreground" Value="{DynamicResource MutedText}" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style Selector="TextBlock.warning">
+      <Setter Property="Foreground" Value="{DynamicResource WarningText}" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+    <Style Selector="TextBlock.error">
+      <Setter Property="Foreground" Value="{DynamicResource ErrorText}" />
+      <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+
+    <!-- Surfaces -->
+    <Style Selector="Border.card">
+      <Setter Property="Background" Value="{DynamicResource CardBackground}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource CardBorder}" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="10" />
+      <Setter Property="Padding" Value="20" />
+    </Style>
+    <!-- Key-cap chip for shortcut guides -->
+    <Style Selector="Border.keycap">
+      <Setter Property="Background" Value="{DynamicResource PageBackground}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource CardBorder}" />
+      <Setter Property="BorderThickness" Value="1,1,1,2" />
+      <Setter Property="CornerRadius" Value="5" />
+      <Setter Property="Padding" Value="7,2" />
+    </Style>
+    <Style Selector="Border.keycap > TextBlock">
+      <Setter Property="FontFamily" Value="Cascadia Mono, Consolas, monospace" />
+      <Setter Property="FontSize" Value="12.5" />
+    </Style>
+    <Style Selector="Border.banner-warning">
+      <Setter Property="Background" Value="{DynamicResource WarningBackground}" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="12,8" />
+    </Style>
+    <Style Selector="Border.banner-error">
+      <Setter Property="Background" Value="{DynamicResource ErrorBackground}" />
+      <Setter Property="CornerRadius" Value="8" />
+      <Setter Property="Padding" Value="12,8" />
+    </Style>
+
+    <!-- Controls -->
+    <Style Selector="Button.primary">
+      <Setter Property="Background" Value="#4F46E5" />
+      <Setter Property="Foreground" Value="White" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Padding" Value="20,10" />
+    </Style>
+    <Style Selector="Button.primary:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#4338CA" />
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+    <Style Selector="Button.primary:disabled /template/ ContentPresenter">
+      <Setter Property="Background" Value="#9CA3C8" />
+      <Setter Property="Foreground" Value="White" />
+    </Style>
+    <!-- App-bar tabs: flat, underlined when current, so they read as places rather than actions. -->
+    <Style Selector="Button.tab">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderBrush" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0,0,0,3" />
+      <Setter Property="CornerRadius" Value="0" />
+      <Setter Property="Padding" Value="14,8,14,9" />
+      <Setter Property="Foreground" Value="{DynamicResource MutedText}" />
+    </Style>
+    <Style Selector="Button.tab:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="{DynamicResource PageBackground}" />
+      <Setter Property="BorderBrush" Value="{DynamicResource CardBorder}" />
+    </Style>
+    <Style Selector="Button.tab.active">
+      <Setter Property="Foreground" Value="{DynamicResource AccentText}" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="BorderBrush" Value="#4F46E5" />
+    </Style>
+    <Style Selector="Button.tab.active:pointerover /template/ ContentPresenter">
+      <Setter Property="BorderBrush" Value="#4F46E5" />
+      <Setter Property="Foreground" Value="{DynamicResource AccentText}" />
+    </Style>
+    <Style Selector="Button.link">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="{DynamicResource AccentText}" />
+      <Setter Property="Padding" Value="4,2" />
+    </Style>
+  </Application.Styles>
+</Application>

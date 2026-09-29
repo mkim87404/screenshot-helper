@@ -1,0 +1,138 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ScreenshotHelper.App.ViewModels"
+             x:Class="ScreenshotHelper.App.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+  <ScrollViewer>
+    <StackPanel Margin="24" Spacing="16" MaxWidth="820">
+      <Grid ColumnDefinitions="*,Auto">
+        <TextBlock Classes="h1" Text="Settings" />
+        <Button Grid.Column="1" Content="Reset everything to defaults" Command="{Binding ResetAllCommand}" />
+      </Grid>
+      <TextBlock Classes="muted" Text="Changes are saved immediately and apply to the next session." />
+
+      <!-- Keys -->
+      <Border Classes="card">
+        <StackPanel Spacing="8">
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Classes="h2" Text="Keys" />
+            <Button Grid.Column="1" Classes="link" Content="Restore default keys" Command="{Binding ResetHotkeysCommand}" />
+          </Grid>
+          <TextBlock Classes="muted" Text="While a session runs these keys belong to Screenshot Helper and don't reach other apps. Pause to type them normally." />
+          <ItemsControl ItemsSource="{Binding Hotkeys}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:HotkeyRowViewModel">
+                <Grid ColumnDefinitions="200,220,*" Margin="0,4">
+                  <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{Binding Label}" FontWeight="SemiBold" />
+                    <TextBlock Classes="muted" FontSize="12" Text="{Binding Description}" />
+                  </StackPanel>
+                  <Button Grid.Column="1" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                          Content="{Binding ButtonText}" Command="{Binding CaptureCommand}"
+                          AutomationProperties.Name="{Binding Label, StringFormat='Change key for {0}'}" />
+                  <StackPanel Grid.Column="2" Margin="12,0,0,0" VerticalAlignment="Center">
+                    <TextBlock Classes="warning" Text="{Binding Problem}" IsVisible="{Binding !ProblemIsError}" />
+                    <TextBlock Classes="error" Text="{Binding Problem}" IsVisible="{Binding ProblemIsError}" />
+                  </StackPanel>
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
+      <!-- Naming -->
+      <Border Classes="card">
+        <StackPanel Spacing="10">
+          <TextBlock Classes="h2" Text="File names" />
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <TextBlock Text="Timestamp and caption keys apply to" VerticalAlignment="Center" />
+            <ComboBox ItemsSource="{Binding AnnotationTargets}" SelectedItem="{Binding SelectedAnnotationTarget}" MinWidth="340"
+                      AutomationProperties.Name="Timestamp and caption keys apply to" />
+          </StackPanel>
+          <TextBlock Classes="muted" TextWrapping="Wrap"
+                     Text="Neither key ever takes a screenshot — only the main and sub keys do. The timestamp is always the moment the shot was taken, in either mode and however often you toggle it." />
+          <CheckBox Content="Always add a timestamp" IsChecked="{Binding AlwaysTimestamp}" />
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <TextBlock Text="Timestamp time" VerticalAlignment="Center" />
+            <ComboBox ItemsSource="{Binding TimestampZones}" SelectedItem="{Binding SelectedTimestampZone}" MinWidth="240" AutomationProperties.Name="Timestamp time zone">
+            </ComboBox>
+          </StackPanel>
+          <TextBlock Classes="muted" Text="Example: 5-2 (2026-09-27 10.05.33 UTC+13) (login page).png" />
+          <CheckBox Content="Number the first shot of every group as M-1 (never rename a solo shot)" IsChecked="{Binding AlwaysNumberFirstShotAsMember}" />
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <TextBlock Text="When a sub number is taken" VerticalAlignment="Center" />
+            <ComboBox ItemsSource="{Binding CollisionPolicies}" SelectedItem="{Binding SelectedCollisionPolicy}" MinWidth="260" AutomationProperties.Name="When a sub number is taken">
+            </ComboBox>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- Capture & session -->
+      <Border Classes="card">
+        <StackPanel Spacing="10">
+          <TextBlock Classes="h2" Text="Capture and session" />
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <TextBlock Text="Default capture" VerticalAlignment="Center" />
+            <ComboBox ItemsSource="{Binding CaptureTargets}" SelectedItem="{Binding SelectedCaptureTarget}" MinWidth="240" AutomationProperties.Name="Default capture target">
+              <ComboBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:CaptureTargetOption"><TextBlock Text="{Binding Label}" /></DataTemplate>
+              </ComboBox.ItemTemplate>
+            </ComboBox>
+          </StackPanel>
+          <CheckBox Content="Also copy each screenshot to the clipboard" IsChecked="{Binding CopyToClipboard}" />
+          <CheckBox Content="Open the folder with this session's shots selected when a session ends" IsChecked="{Binding OpenFolderOnSessionEnd}" />
+          <CheckBox Content="Exit the app when a session ends" IsChecked="{Binding ExitOnSessionEnd}" />
+        </StackPanel>
+      </Border>
+
+      <!-- Feedback -->
+      <Border Classes="card">
+        <StackPanel Spacing="10">
+          <TextBlock Classes="h2" Text="Sounds and notifications" />
+          <CheckBox Content="Play sounds" IsChecked="{Binding SoundsEnabled}" />
+          <StackPanel Orientation="Horizontal" Spacing="10" IsEnabled="{Binding SoundsEnabled}">
+            <TextBlock Text="Volume" VerticalAlignment="Center" />
+            <Slider Minimum="0" Maximum="100" Value="{Binding SoundVolume}" Width="240" TickFrequency="10" IsSnapToTickEnabled="True"
+                    AutomationProperties.Name="Sound volume" />
+            <TextBlock Text="{Binding SoundVolume, StringFormat='{}{0:0}%'}" VerticalAlignment="Center" />
+          </StackPanel>
+          <ItemsControl ItemsSource="{Binding SoundToggles}" IsEnabled="{Binding SoundsEnabled}">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:SoundToggleViewModel">
+                <StackPanel Orientation="Horizontal" Width="250" Margin="0,2">
+                  <CheckBox Content="{Binding Label}" IsChecked="{Binding IsOn}" />
+                  <Button Classes="link" Content="▶" ToolTip.Tip="Play" AutomationProperties.Name="{Binding Label, StringFormat='Play the {0} sound'}"
+                          Command="{Binding $parent[UserControl].((vm:SettingsViewModel)DataContext).PreviewSoundCommand}" CommandParameter="{Binding Kind}" />
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+          <CheckBox Content="Show on-screen notifications (never included in screenshots)" IsChecked="{Binding ToastsEnabled}" />
+          <StackPanel Orientation="Horizontal" Spacing="10" IsEnabled="{Binding ToastsEnabled}">
+            <TextBlock Text="Position" VerticalAlignment="Center" />
+            <ComboBox ItemsSource="{Binding ToastCorners}" SelectedItem="{Binding SelectedToastCorner}" MinWidth="180" AutomationProperties.Name="Notification position">
+            </ComboBox>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <!-- Appearance -->
+      <Border Classes="card">
+        <StackPanel Spacing="10">
+          <TextBlock Classes="h2" Text="Appearance" />
+          <StackPanel Orientation="Horizontal" Spacing="10">
+            <TextBlock Text="Theme" VerticalAlignment="Center" />
+            <ComboBox ItemsSource="{Binding Themes}" SelectedItem="{Binding SelectedTheme}" MinWidth="180" AutomationProperties.Name="Theme">
+            </ComboBox>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <Button Classes="link" Content="Open the log folder" Command="{Binding OpenLogFolderCommand}" HorizontalAlignment="Left" />
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

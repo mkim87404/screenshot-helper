@@ -1,0 +1,46 @@
+# Builds and tests on every push and pull request.
+# Windows runs the whole suite (app, Win32 platform layer, core); Linux runs the OS-independent Core tests to prove it stays portable.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  AVALONIA_TELEMETRY_OPTOUT: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+
+jobs:
+  windows:
+    name: Windows (full suite)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Build and test
+        shell: pwsh
+        run: ./build/Build.ps1 -Configuration Release
+
+  linux-core:
+    name: Linux (Core portability)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+      - name: Build and test Core
+        shell: pwsh
+        run: ./build/Build.ps1 -Configuration Release -CoreOnly

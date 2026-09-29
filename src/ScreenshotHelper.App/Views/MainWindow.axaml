@@ -1,0 +1,43 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ScreenshotHelper.App.ViewModels"
+        xmlns:v="using:ScreenshotHelper.App.Views"
+        x:Class="ScreenshotHelper.App.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Screenshot Helper"
+        Icon="/Assets/app.ico"
+        Width="900" Height="860" MinWidth="720" MinHeight="560"
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource PageBackground}">
+
+  <Window.DataTemplates>
+    <DataTemplate DataType="vm:HomeViewModel"><v:HomeView /></DataTemplate>
+    <DataTemplate DataType="vm:SummaryViewModel"><v:SummaryView /></DataTemplate>
+    <DataTemplate DataType="vm:SettingsViewModel"><v:SettingsView /></DataTemplate>
+    <DataTemplate DataType="vm:RenumberViewModel"><v:RenumberView /></DataTemplate>
+  </Window.DataTemplates>
+
+  <DockPanel>
+    <!-- App bar -->
+    <Border DockPanel.Dock="Top" Padding="20,12" BorderBrush="{DynamicResource CardBorder}" BorderThickness="0,0,0,1"
+            Background="{DynamicResource CardBackground}">
+      <Grid ColumnDefinitions="Auto,*,Auto">
+        <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+          <Image Source="/Assets/app-256.png" Width="28" Height="28" />
+          <TextBlock Text="Screenshot Helper" FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center" />
+        </StackPanel>
+        <!-- Navigation between the app's areas, styled as tabs (not action buttons) with the current one underlined. -->
+        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Bottom" Margin="0,0,0,-12">
+          <Button Classes="tab" Classes.active="{Binding IsSessionTab}" Content="Session" Command="{Binding ShowHomeCommand}"
+                  AutomationProperties.Name="Session: choose a folder and numbering, then start capturing" ToolTip.Tip="Set up and start a screenshot session" />
+          <Button Classes="tab" Classes.active="{Binding IsRenumberTab}" Content="Renumber" Command="{Binding ShowRenumberCommand}"
+                  AutomationProperties.Name="Renumber existing screenshots" ToolTip.Tip="Fix numbering in bulk" />
+          <Button Classes="tab" Classes.active="{Binding IsSettingsTab}" Content="Settings" Command="{Binding ShowSettingsCommand}"
+                  AutomationProperties.Name="Settings" ToolTip.Tip="Keys, naming, sounds, theme" />
+        </StackPanel>
+      </Grid>
+    </Border>
+
+    <ContentControl Content="{Binding CurrentPage}" />
+  </DockPanel>
+</Window>

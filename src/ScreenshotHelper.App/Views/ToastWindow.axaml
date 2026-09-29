@@ -1,0 +1,11 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="ScreenshotHelper.App.Views.ToastWindow"
+        Title="Screenshot Helper notification"
+        SizeToContent="WidthAndHeight" MaxWidth="460"
+        WindowDecorations="None" ShowInTaskbar="False" ShowActivated="False" Topmost="True" CanResize="False"
+        Background="Transparent" TransparencyLevelHint="Transparent">
+  <Border x:Name="Card" CornerRadius="10" Padding="14,10" Background="#F21D2029" BorderThickness="0,0,0,3" BorderBrush="#16A34A">
+    <TextBlock x:Name="MessageText" Foreground="White" FontSize="14" TextWrapping="Wrap" MaxWidth="420" />
+  </Border>
+</Window>

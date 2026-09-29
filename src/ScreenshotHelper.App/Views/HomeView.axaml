@@ -1,0 +1,128 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:ScreenshotHelper.App.ViewModels"
+             xmlns:rn="using:ScreenshotHelper.Core.Renumber"
+             x:Class="ScreenshotHelper.App.Views.HomeView"
+             x:DataType="vm:HomeViewModel">
+  <ScrollViewer>
+    <StackPanel Margin="24" Spacing="16" MaxWidth="820">
+
+      <!-- Interrupted renumber recovery -->
+      <ItemsControl ItemsSource="{Binding IncompleteRenumbers}" IsVisible="{Binding HasRecovery}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate x:DataType="rn:RenameJournal">
+            <Border Classes="banner-warning" Margin="0,0,0,8">
+              <Grid ColumnDefinitions="*,Auto,Auto" >
+                <TextBlock Classes="warning" VerticalAlignment="Center"
+                           Text="{Binding Description, StringFormat='A renumber was interrupted ({0}). Finish it or undo what was done:'}" />
+                <Button Grid.Column="1" Margin="8,0,0,0" Content="Finish"
+                        Command="{Binding $parent[UserControl].((vm:HomeViewModel)DataContext).ResumeRenumberCommand}" CommandParameter="{Binding}" />
+                <Button Grid.Column="2" Margin="8,0,0,0" Content="Undo"
+                        Command="{Binding $parent[UserControl].((vm:HomeViewModel)DataContext).RollBackRenumberCommand}" CommandParameter="{Binding}" />
+              </Grid>
+            </Border>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+
+      <!-- Folder -->
+      <Border Classes="card">
+        <StackPanel Spacing="10">
+          <TextBlock Classes="h2" Text="1. Where should screenshots go?" />
+          <Grid ColumnDefinitions="*,Auto,Auto">
+            <TextBox Text="{Binding Folder}" IsReadOnly="True" PlaceholderText="No folder chosen"
+                     AutomationProperties.Name="Screenshot folder" />
+            <Button Grid.Column="1" Margin="8,0,0,0" Content="Browse…" Command="{Binding BrowseCommand}" />
+            <Button Grid.Column="2" Margin="8,0,0,0" Content="Open in Explorer" Command="{Binding RevealFolderCommand}" />
+          </Grid>
+          <TextBlock Classes="muted" Text="{Binding HighestText}" />
+          <TextBlock Classes="muted" Text="Recent folders" Margin="0,6,0,0" IsVisible="{Binding !!RecentFolders.Count}" />
+          <ItemsControl ItemsSource="{Binding RecentFolders}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:RecentFolderItem">
+                <Grid ColumnDefinitions="*,Auto">
+                  <Button Classes="link" HorizontalAlignment="Left" Content="{Binding Display}" IsEnabled="{Binding Exists}"
+                          Command="{Binding $parent[UserControl].((vm:HomeViewModel)DataContext).OpenRecentCommand}" CommandParameter="{Binding}" />
+                  <Button Grid.Column="1" Classes="link" Content="Remove" AutomationProperties.Name="{Binding Path, StringFormat='Remove {0} from recent folders'}"
+                          Command="{Binding $parent[UserControl].((vm:HomeViewModel)DataContext).RemoveRecentCommand}" CommandParameter="{Binding}" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
+      <!-- Numbering -->
+      <Border Classes="card">
+        <StackPanel Spacing="10">
+          <TextBlock Classes="h2" Text="2. Where should numbering start?" />
+          <StackPanel Orientation="Horizontal" Spacing="16">
+            <RadioButton GroupName="mode" Content="Start a new group" IsChecked="{Binding !IsContinueMode}" />
+            <RadioButton GroupName="mode" Content="Continue an existing group" IsChecked="{Binding IsContinueMode}" />
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="12">
+            <StackPanel Spacing="4">
+              <TextBlock Text="Main number" />
+              <NumericUpDown Value="{Binding MainNumber}" Minimum="0" Maximum="999999" Increment="1" FormatString="0" Width="150"
+                             AutomationProperties.Name="Main number" />
+            </StackPanel>
+            <StackPanel Spacing="4" IsVisible="{Binding IsContinueMode}">
+              <TextBlock Text="Next sub number" />
+              <NumericUpDown Value="{Binding SubNumber}" Minimum="1" Maximum="999999" Increment="1" FormatString="0" Width="150"
+                             AutomationProperties.Name="Next sub number" />
+            </StackPanel>
+          </StackPanel>
+          <TextBlock Classes="muted" IsVisible="{Binding !IsContinueMode}"
+                     Text="The main key saves this number; the sub key saves it as the group's first member (e.g. 8-1)." />
+          <TextBlock Classes="muted" IsVisible="{Binding IsContinueMode}"
+                     Text="The sub key continues this group; the main key moves on to the next free group." />
+          <Border Classes="banner-warning" IsVisible="{Binding CheckMessage, Converter={x:Static ObjectConverters.IsNotNull}}">
+            <Grid ColumnDefinitions="*,Auto">
+              <TextBlock Classes="warning" Text="{Binding CheckMessage}" VerticalAlignment="Center" />
+              <Button Grid.Column="1" Margin="8,0,0,0" Content="{Binding SuggestionText}" Command="{Binding UseSuggestionCommand}"
+                      IsVisible="{Binding SuggestionText, Converter={x:Static ObjectConverters.IsNotNull}}" />
+            </Grid>
+          </Border>
+        </StackPanel>
+      </Border>
+
+      <!-- Capture -->
+      <Border Classes="card">
+        <StackPanel Spacing="10">
+          <TextBlock Classes="h2" Text="3. What should be captured?" />
+          <ComboBox ItemsSource="{Binding CaptureTargets}" SelectedItem="{Binding SelectedCaptureTarget}" MinWidth="260"
+                    AutomationProperties.Name="Capture target">
+            <ComboBox.ItemTemplate>
+              <DataTemplate x:DataType="vm:CaptureTargetOption"><TextBlock Text="{Binding Label}" /></DataTemplate>
+            </ComboBox.ItemTemplate>
+          </ComboBox>
+          <TextBlock Classes="muted" Margin="0,6,0,0" Text="Keys during a session" />
+          <ItemsControl ItemsSource="{Binding KeyHints}" AutomationProperties.Name="Keys during a session">
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate><WrapPanel /></ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="vm:KeyHint">
+                <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,0,18,8">
+                  <Border Classes="keycap"><TextBlock Text="{Binding Keys}" /></Border>
+                  <TextBlock Text="{Binding Action}" VerticalAlignment="Center" />
+                </StackPanel>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </StackPanel>
+      </Border>
+
+      <Border Classes="banner-error" IsVisible="{Binding ErrorMessage, Converter={x:Static ObjectConverters.IsNotNull}}">
+        <TextBlock Classes="error" Text="{Binding ErrorMessage}" />
+      </Border>
+
+      <StackPanel Orientation="Horizontal" Spacing="12">
+        <Button Classes="primary" Content="Start session" Command="{Binding StartCommand}" IsDefault="True"
+                AutomationProperties.Name="Start session" />
+        <TextBlock Classes="muted" VerticalAlignment="Center"
+                   Text="The window hides while you capture; use the tray icon or the keys above." />
+      </StackPanel>
+    </StackPanel>
+  </ScrollViewer>
+</UserControl>

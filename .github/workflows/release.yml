@@ -1,0 +1,58 @@
+# Publishes a GitHub Release when a version tag is pushed, e.g.:
+#   git tag v1.0.0 && git push origin v1.0.0
+# Produces self-contained single-file .exe files (x64 + ARM64), portable zips, SHA256 checksums and a signed build-provenance
+# attestation that anyone can check with `gh attestation verify <file> -R <owner>/<repo>` (attestations need a public repo on
+# GitHub Free/Pro/Team, which is also why the job only runs in the public repository).
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+
+permissions:
+  contents: write        # create the release
+  id-token: write        # attestation signing (OIDC)
+  attestations: write    # store the attestation
+  artifact-metadata: write
+
+env:
+  AVALONIA_TELEMETRY_OPTOUT: "1"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "1"
+  DOTNET_NOLOGO: "1"
+
+jobs:
+  release:
+    # Releases are only ever made from the public repository; in the private development repo a pushed tag does nothing.
+    if: github.event.repository.visibility == 'public'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Test
+        shell: pwsh
+        run: ./build/Build.ps1 -Configuration Release
+
+      - name: Publish
+        shell: pwsh
+        run: ./build/Publish.ps1 -Version ('${{ github.ref_name }}'.TrimStart('v'))
+
+      - name: Attest build provenance
+        uses: actions/attest@v4
+        with:
+          subject-path: |
+            artifacts/*.exe
+            artifacts/*.zip
+
+      - name: Create GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $files = @(Get-ChildItem artifacts -File | ForEach-Object FullName)
+          $extra = @()
+          if ('${{ github.ref_name }}' -match '-') { $extra += '--prerelease' }
+          gh release create '${{ github.ref_name }}' @files --title 'Screenshot Helper ${{ github.ref_name }}' --generate-notes @extra
+          if ($LASTEXITCODE -ne 0) { throw 'gh release create failed.' }

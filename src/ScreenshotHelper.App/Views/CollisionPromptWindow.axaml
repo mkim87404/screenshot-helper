@@ -1,0 +1,20 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:ScreenshotHelper.App.ViewModels"
+        x:Class="ScreenshotHelper.App.Views.CollisionPromptWindow"
+        x:DataType="vm:CollisionPromptViewModel"
+        Title="Number already taken"
+        Icon="/Assets/app.ico"
+        Width="520" SizeToContent="Height" CanResize="False"
+        WindowStartupLocation="CenterScreen" ShowInTaskbar="False"
+        Background="{DynamicResource CardBackground}">
+  <StackPanel Margin="20" Spacing="10">
+    <TextBlock Classes="h2" Text="{Binding Title}" />
+    <TextBlock Classes="muted" Text="{Binding Detail}" />
+    <Button x:Name="AppendButton" Classes="primary" HorizontalAlignment="Stretch" Content="{Binding AppendText}" Click="OnAppend" IsDefault="True" />
+    <Button HorizontalAlignment="Stretch" Content="{Binding InsertText}" Click="OnInsert" />
+    <Button HorizontalAlignment="Stretch" Content="{Binding OverwriteText}" Click="OnOverwrite" />
+    <Button HorizontalAlignment="Stretch" Content="{Binding DiscardText}" Click="OnDiscard" IsCancel="True" />
+    <CheckBox Content="Do the same for the rest of this session (not for overwrite)" IsChecked="{Binding RememberForSession}" />
+  </StackPanel>
+</Window>
