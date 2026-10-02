@@ -22,8 +22,9 @@
           <ItemsControl ItemsSource="{Binding Hotkeys}">
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:HotkeyRowViewModel">
-                <Grid ColumnDefinitions="200,220,*" Margin="0,4">
-                  <StackPanel VerticalAlignment="Center">
+                <!-- The label column ends 20 px before the key box (the card's own padding), so descriptions never run up to its border. -->
+                <Grid ColumnDefinitions="260,220,*" Margin="0,4">
+                  <StackPanel VerticalAlignment="Center" Margin="0,0,20,0">
                     <TextBlock Text="{Binding Label}" FontWeight="SemiBold" />
                     <TextBlock Classes="muted" FontSize="12" Text="{Binding Description}" />
                   </StackPanel>

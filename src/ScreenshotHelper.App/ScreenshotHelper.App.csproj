@@ -3,7 +3,10 @@
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
-    <AssemblyName>ScreenshotHelper</AssemblyName>
+    <!-- The exe's file name and its file description (what the taskbar, Task Manager and Windows' tray settings show) both read
+         "Screenshot Helper"; code namespaces and the data folders (%APPDATA%\ScreenshotHelper) keep the unspaced identifier. -->
+    <AssemblyName>Screenshot Helper</AssemblyName>
+    <AssemblyTitle>Screenshot Helper</AssemblyTitle>
     <RootNamespace>ScreenshotHelper.App</RootNamespace>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\app.ico</ApplicationIcon>

@@ -49,6 +49,9 @@ public sealed partial class SummaryViewModel : ObservableObject
 /// <summary>Navigation between the main window's pages.</summary>
 public sealed partial class MainWindowViewModel : ObservableObject
 {
+    /// <summary>The Session tab's folder as last carried over to the Renumber tab.</summary>
+    private string? _sessionFolderSeen;
+
     public MainWindowViewModel(AppServices services, HomeViewModel home, SettingsViewModel settings, RenumberViewModel renumber)
     {
         Services = services;
@@ -85,8 +88,25 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public void ShowRenumberFor(string folder, IReadOnlyCollection<string>? files)
     {
+        if (string.Equals(folder, Home.Folder, StringComparison.OrdinalIgnoreCase))
+        {
+            _sessionFolderSeen = folder;
+        }
+
         Renumber.Open(folder, files);
         CurrentPage = Renumber;
+    }
+
+    /// <summary>
+    /// The window was activated again: files may have been changed in another app meanwhile, so a shown Renumber list is checked (one
+    /// directory listing; rebuilt only if its screenshots changed).
+    /// </summary>
+    public void WindowActivated()
+    {
+        if (ReferenceEquals(CurrentPage, Renumber) && Renumber.Folder is { } folder)
+        {
+            Renumber.Open(folder);
+        }
     }
 
     [RelayCommand]
@@ -100,16 +120,25 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [RelayCommand]
     private void ShowSettings() => CurrentPage = Settings;
 
+    /// <summary>
+    /// Opens the Renumber tab on the Session tab's folder if that changed since the last visit; otherwise on the folder the Renumber tab
+    /// already shows (possibly one chosen there), checked for changed files.
+    /// </summary>
     [RelayCommand]
     private void ShowRenumber()
     {
-        if (Home.Folder is not null)
+        var sessionFolder = Home.Folder;
+        if (sessionFolder is not null && !string.Equals(sessionFolder, _sessionFolderSeen, StringComparison.OrdinalIgnoreCase))
         {
-            ShowRenumberFor(Home.Folder, null);
+            ShowRenumberFor(sessionFolder, null);
+            return;
         }
-        else
+
+        if (Renumber.Folder is { } current)
         {
-            CurrentPage = Renumber;
+            Renumber.Open(current);
         }
+
+        CurrentPage = Renumber;
     }
 }

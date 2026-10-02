@@ -11,10 +11,13 @@
   <StackPanel Margin="20" Spacing="10">
     <TextBlock Classes="h2" Text="{Binding Title}" />
     <TextBlock Classes="muted" Text="{Binding Detail}" />
-    <Button x:Name="AppendButton" Classes="primary" HorizontalAlignment="Stretch" Content="{Binding AppendText}" Click="OnAppend" IsDefault="True" />
-    <Button HorizontalAlignment="Stretch" Content="{Binding InsertText}" Click="OnInsert" />
-    <Button HorizontalAlignment="Stretch" Content="{Binding OverwriteText}" Click="OnOverwrite" />
-    <Button HorizontalAlignment="Stretch" Content="{Binding DiscardText}" Click="OnDiscard" IsCancel="True" />
+    <!-- Up/Down move between the choices and Enter picks the highlighted one; it starts on Append. -->
+    <StackPanel Spacing="10" XYFocus.NavigationModes="Keyboard">
+      <Button x:Name="AppendButton" Classes="primary" HorizontalAlignment="Stretch" Content="{Binding AppendText}" Click="OnAppend" IsDefault="True" />
+      <Button HorizontalAlignment="Stretch" Content="{Binding InsertText}" Click="OnInsert" />
+      <Button HorizontalAlignment="Stretch" Content="{Binding OverwriteText}" Click="OnOverwrite" />
+      <Button HorizontalAlignment="Stretch" Content="{Binding DiscardText}" Click="OnDiscard" IsCancel="True" />
+    </StackPanel>
     <CheckBox Content="Do the same for the rest of this session (not for overwrite)" IsChecked="{Binding RememberForSession}" />
   </StackPanel>
 </Window>

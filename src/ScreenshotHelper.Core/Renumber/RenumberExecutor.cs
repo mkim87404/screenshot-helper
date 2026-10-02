@@ -192,37 +192,6 @@ public sealed class RenumberExecutor
         return ExecutionResult.Ok(doneCount);
     }
 
-    /// <summary>
-    /// Steps up to the last recorded index are done. The next one is "in doubt" (crash between rename and progress write):
-    /// its source can't have been recreated by a later step yet, so checking the disk is unambiguous.
-    /// </summary>
-    private static int ResolveInDoubt(RenameJournal journal, int recorded)
-    {
-        if (recorded >= journal.Steps.Count)
-        {
-            return recorded;
-        }
-
-        var step = journal.Steps[recorded];
-        var fromExists = File.Exists(Path.Combine(journal.Folder, step.From));
-        var toExists = File.Exists(Path.Combine(journal.Folder, step.To));
-        return !fromExists && toExists ? recorded + 1 : recorded;
-    }
-
-    // Journals are read back from disk, so treat them as untrusted: every step must be a bare filename inside the journal's folder.
-    private static bool IsWellFormed(RenameJournal journal) =>
-        !string.IsNullOrWhiteSpace(journal.Id)
-        && journal.Id.IndexOfAny(Path.GetInvalidFileNameChars()) < 0
-        && Path.IsPathFullyQualified(journal.Folder ?? string.Empty)
-        && journal.Steps is not null
-        && journal.Steps.All(s => IsBareFileName(s.From) && IsBareFileName(s.To));
-
-    private static bool IsBareFileName(string? name) =>
-        !string.IsNullOrWhiteSpace(name)
-        && name is not "." and not ".."
-        && name.IndexOfAny(['/', '\\', ':']) < 0
-        && string.Equals(Path.GetFileName(name), name, StringComparison.Ordinal);
-
     private string PlanPath(string id) => Path.Combine(_journalDirectory, id + PlanSuffix);
 
     private string ProgressPath(string id) => Path.Combine(_journalDirectory, id + ProgressSuffix);
@@ -288,4 +257,35 @@ public sealed class RenumberExecutor
             return null;
         }
     }
+
+    /// <summary>
+    /// Steps up to the last recorded index are done. The next one is "in doubt" (crash between rename and progress write):
+    /// its source can't have been recreated by a later step yet, so checking the disk is unambiguous.
+    /// </summary>
+    private static int ResolveInDoubt(RenameJournal journal, int recorded)
+    {
+        if (recorded >= journal.Steps.Count)
+        {
+            return recorded;
+        }
+
+        var step = journal.Steps[recorded];
+        var fromExists = File.Exists(Path.Combine(journal.Folder, step.From));
+        var toExists = File.Exists(Path.Combine(journal.Folder, step.To));
+        return !fromExists && toExists ? recorded + 1 : recorded;
+    }
+
+    // Journals are read back from disk, so treat them as untrusted: every step must be a bare filename inside the journal's folder.
+    private static bool IsWellFormed(RenameJournal journal) =>
+        !string.IsNullOrWhiteSpace(journal.Id)
+        && journal.Id.IndexOfAny(Path.GetInvalidFileNameChars()) < 0
+        && Path.IsPathFullyQualified(journal.Folder ?? string.Empty)
+        && journal.Steps is not null
+        && journal.Steps.All(s => IsBareFileName(s.From) && IsBareFileName(s.To));
+
+    private static bool IsBareFileName(string? name) =>
+        !string.IsNullOrWhiteSpace(name)
+        && name is not "." and not ".."
+        && name.IndexOfAny(['/', '\\', ':']) < 0
+        && string.Equals(Path.GetFileName(name), name, StringComparison.Ordinal);
 }

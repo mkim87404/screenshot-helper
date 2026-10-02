@@ -19,6 +19,10 @@
           <SolidColorBrush x:Key="ErrorText" Color="#B42318" />
           <SolidColorBrush x:Key="ErrorBackground" Color="#FDECEA" />
           <SolidColorBrush x:Key="SuccessText" Color="#146C43" />
+          <!-- Pinned action bar: a shade darker than the page, so it doesn't read as another white card. -->
+          <SolidColorBrush x:Key="ActionBarBackground" Color="#E6E9F1" />
+          <SolidColorBrush x:Key="ActionBarBorder" Color="#CDD2DE" />
+          <BoxShadows x:Key="ActionBarShadow">0 -4 14 0 #40101828</BoxShadows>
         </ResourceDictionary>
         <ResourceDictionary x:Key="Dark">
           <SolidColorBrush x:Key="PageBackground" Color="#14161C" />
@@ -31,6 +35,10 @@
           <SolidColorBrush x:Key="ErrorText" Color="#FF8A80" />
           <SolidColorBrush x:Key="ErrorBackground" Color="#3B1614" />
           <SolidColorBrush x:Key="SuccessText" Color="#6EE7A8" />
+          <!-- Raised surfaces are lighter in dark mode, and a lighter top edge carries the separation where shadows barely show. -->
+          <SolidColorBrush x:Key="ActionBarBackground" Color="#262A36" />
+          <SolidColorBrush x:Key="ActionBarBorder" Color="#3A3F4E" />
+          <BoxShadows x:Key="ActionBarShadow">0 -4 14 0 #8C000000</BoxShadows>
         </ResourceDictionary>
       </ResourceDictionary.ThemeDictionaries>
       <Color x:Key="SystemAccentColor">#4F46E5</Color>

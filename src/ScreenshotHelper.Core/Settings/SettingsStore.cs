@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using ScreenshotHelper.Core.Diagnostics;
 using ScreenshotHelper.Core.IO;
@@ -32,10 +33,10 @@ public sealed class SettingsStore
     public string StatePath => Path.Combine(Directory, "state.json");
 
     public AppSettings LoadSettings() =>
-        (Load(SettingsPath, SettingsJsonContext.Default.AppSettings) ?? AppSettings.Default).Sanitized();
+        (Load(SettingsPath, SettingsJsonContext.Default.AppSettings, AppSettings.Default) ?? AppSettings.Default).Sanitized();
 
     public AppState LoadState() =>
-        (Load(StatePath, SettingsJsonContext.Default.AppState) ?? new AppState()).Sanitized();
+        (Load(StatePath, SettingsJsonContext.Default.AppState, new AppState()) ?? new AppState()).Sanitized();
 
     public void Save(AppSettings settings) =>
         AtomicFile.WriteAllText(SettingsPath, JsonSerializer.Serialize(settings, SettingsJsonContext.Default.AppSettings));
@@ -43,7 +44,8 @@ public sealed class SettingsStore
     public void Save(AppState state) =>
         AtomicFile.WriteAllText(StatePath, JsonSerializer.Serialize(state, SettingsJsonContext.Default.AppState));
 
-    private T? Load<T>(string path, System.Text.Json.Serialization.Metadata.JsonTypeInfo<T> typeInfo)
+    /// <summary>Reads a JSON file over <paramref name="defaults"/>: keys missing from the file keep their default values.</summary>
+    private T? Load<T>(string path, System.Text.Json.Serialization.Metadata.JsonTypeInfo<T> typeInfo, T defaults)
         where T : class
     {
         if (!File.Exists(path))
@@ -53,7 +55,27 @@ public sealed class SettingsStore
 
         try
         {
-            return JsonSerializer.Deserialize(File.ReadAllText(path), typeInfo);
+            var node = JsonNode.Parse(File.ReadAllText(path));
+            if (node is null)
+            {
+                return null;
+            }
+
+            if (node is not JsonObject loaded)
+            {
+                throw new JsonException($"Expected a JSON object in {path}.");
+            }
+
+            // .NET 10's source-generated deserializer gives an init-only property that's missing from the JSON its type's default
+            // (false, 0, null) instead of its initializer (dotnet/runtime#84484, fixed in .NET 11). So start from the defaults and lay
+            // the file's keys over them: a setting added in a newer version, or left out of a hand-edited file, keeps its default.
+            var merged = JsonSerializer.SerializeToNode(defaults, typeInfo)!.AsObject();
+            foreach (var (key, value) in loaded)
+            {
+                merged[key] = value?.DeepClone();
+            }
+
+            return merged.Deserialize(typeInfo);
         }
         catch (JsonException ex)
         {

@@ -242,6 +242,98 @@ public class RenumberViewModelTests
         Assert.Equal([true, true, false], vm.Files.Select(f => f.IsSelected));
         Assert.Equal("2 of 3 selected", vm.SelectionSummary);
     }
+
+    [Fact]
+    public void Reopening_the_same_folder_keeps_the_list_and_selection_until_its_files_change()
+    {
+        using var h = new ServicesHarness();
+        using var folder = new TempDir().With("3-1.png", "3-2.png", "4.png");
+        var vm = new RenumberViewModel(h.Services, () => Task.FromResult<string?>(null));
+        vm.Open(folder.Path);
+        vm.Files[1].IsSelected = true;
+        var rows = vm.Files.ToList();
+
+        // Switching back to the tab with nothing changed: same rows, same selection, nothing rebuilt.
+        vm.Open(folder.Path);
+        Assert.Equal(rows, vm.Files);
+        Assert.True(vm.Files[1].IsSelected);
+
+        // A new screenshot in the folder: the list is rebuilt and the selection carried over.
+        File.WriteAllBytes(Path.Combine(folder.Path, "5.png"), []);
+        vm.Open(folder.Path);
+        Assert.Equal(["3-1.png", "3-2.png", "4.png", "5.png"], vm.Files.Select(f => f.FileName));
+        Assert.Equal(["3-2.png"], vm.Files.Where(f => f.IsSelected).Select(f => f.FileName));
+    }
+
+    [Fact]
+    public void Opening_with_files_to_preselect_always_reloads_with_that_selection()
+    {
+        using var h = new ServicesHarness();
+        using var folder = new TempDir().With("3-1.png", "3-2.png", "4.png");
+        var vm = new RenumberViewModel(h.Services, () => Task.FromResult<string?>(null));
+        vm.Open(folder.Path);
+        vm.Files[0].IsSelected = true;
+
+        vm.Open(folder.Path, ["4.png"]);
+
+        Assert.Equal(["4.png"], vm.Files.Where(f => f.IsSelected).Select(f => f.FileName));
+    }
+}
+
+public class RenumberNavigationTests
+{
+    [Fact]
+    public async Task Renumber_tab_follows_a_changed_session_folder_and_otherwise_keeps_its_own()
+    {
+        using var h = new ServicesHarness();
+        using var a = new TempDir().With("1.png");
+        using var b = new TempDir().With("2.png");
+        using var c = new TempDir().With("3.png");
+        await using var coordinator = new SessionCoordinator(h.Services, new FakeSessionUi(), x => x());
+        var vm = Window(h, coordinator);
+
+        vm.Home.Folder = a.Path;
+        vm.ShowRenumberCommand.Execute(null);
+        Assert.Equal(a.Path, vm.Renumber.Folder);
+
+        // A folder chosen on the Renumber tab survives a trip to another tab while the Session folder stays the same.
+        vm.Renumber.Folder = c.Path;
+        vm.ShowSettingsCommand.Execute(null);
+        vm.ShowRenumberCommand.Execute(null);
+        Assert.Equal(c.Path, vm.Renumber.Folder);
+        Assert.Equal(["3.png"], vm.Renumber.Files.Select(f => f.FileName));
+
+        // Changing the Session folder carries over on the next visit.
+        vm.Home.Folder = b.Path;
+        vm.ShowRenumberCommand.Execute(null);
+        Assert.Equal(["2.png"], vm.Renumber.Files.Select(f => f.FileName));
+    }
+
+    [Fact]
+    public async Task Coming_back_to_the_window_refreshes_the_renumber_list_only_while_it_is_shown()
+    {
+        using var h = new ServicesHarness();
+        using var folder = new TempDir().With("1.png");
+        await using var coordinator = new SessionCoordinator(h.Services, new FakeSessionUi(), x => x());
+        var vm = Window(h, coordinator);
+        vm.Home.Folder = folder.Path;
+        vm.ShowRenumberCommand.Execute(null);
+
+        File.WriteAllBytes(Path.Combine(folder.Path, "2.png"), []);
+        vm.WindowActivated();
+        Assert.Equal(["1.png", "2.png"], vm.Renumber.Files.Select(f => f.FileName));
+
+        vm.ShowSettingsCommand.Execute(null);
+        File.WriteAllBytes(Path.Combine(folder.Path, "3.png"), []);
+        vm.WindowActivated();
+        Assert.Equal(2, vm.Renumber.Files.Count);
+    }
+
+    private static MainWindowViewModel Window(ServicesHarness h, SessionCoordinator coordinator)
+    {
+        Func<Task<string?>> pick = () => Task.FromResult<string?>(null);
+        return new MainWindowViewModel(h.Services, new HomeViewModel(h.Services, coordinator, pick), new SettingsViewModel(h.Services), new RenumberViewModel(h.Services, pick));
+    }
 }
 
 public class WindowSizingTests

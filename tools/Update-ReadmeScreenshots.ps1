@@ -32,7 +32,7 @@ Set-StrictMode -Version Latest
 
 $root = Split-Path -Parent $PSScriptRoot
 $media = Join-Path $root '.github/media'
-$exe = Join-Path $root 'src/ScreenshotHelper.App/bin/Release/net10.0-windows/ScreenshotHelper.exe'
+$exe = Join-Path $root 'src/ScreenshotHelper.App/bin/Release/net10.0-windows/Screenshot Helper.exe'
 $drive = "${DriveLetter}:"
 $project = "$drive\Project screenshots"
 
@@ -86,7 +86,7 @@ function Set-Number($app, [string] $name, [string] $value) {
 }
 
 function Save-Capture([string] $title, [string] $name) {
-    $arguments = @('-NoProfile', '-File', (Join-Path $PSScriptRoot 'Capture-Window.ps1'), '-ProcessName', 'ScreenshotHelper', '-Output', (Join-Path $staging $name), '-DelayMs', '200')
+    $arguments = @('-NoProfile', '-File', (Join-Path $PSScriptRoot 'Capture-Window.ps1'), '-ProcessName', 'Screenshot Helper', '-Output', (Join-Path $staging $name), '-DelayMs', '200')
     if ($title) { $arguments += @('-Title', $title) }
     & pwsh @arguments
     if ($LASTEXITCODE -ne 0) { throw "Capturing $name failed." }
@@ -116,7 +116,7 @@ function Write-DemoSettings([string] $theme) {
 }
 
 # Refuse to run where it could disturb real work: a running instance would own the hotkeys and the single-instance lock.
-if (Get-Process ScreenshotHelper -ErrorAction SilentlyContinue) { throw 'Close Screenshot Helper first (tray icon → Exit).' }
+if ([System.Threading.Mutex]::TryOpenExisting('Local\ScreenshotHelper.SingleInstance', [ref]$null)) { throw 'Close Screenshot Helper first (tray icon → Exit).' }
 if (Test-Path "$drive\") { throw "Drive $drive is already in use; pass a free letter with -DriveLetter." }
 
 dotnet build (Join-Path $root 'src/ScreenshotHelper.App') --configuration Release --nologo --verbosity quiet

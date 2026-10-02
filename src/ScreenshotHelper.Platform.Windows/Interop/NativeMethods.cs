@@ -34,6 +34,11 @@ internal static partial class NativeMethods
     public const int SM_CXVIRTUALSCREEN = 78;
     public const int SM_CYVIRTUALSCREEN = 79;
     public const int DWMWA_EXTENDED_FRAME_BOUNDS = 9;
+    public const int DWMWA_CLOAK = 13;
+    public const int DWMWA_CLOAKED = 14;
+    public const uint LWA_ALPHA = 0x00000002;
+    public const uint ABM_GETAUTOHIDEBAREX = 0x0000000B;
+    public const uint ABE_LEFT = 0, ABE_TOP = 1, ABE_RIGHT = 2, ABE_BOTTOM = 3;
 
     public const uint SND_ASYNC = 0x0001;
     public const uint SND_NODEFAULT = 0x0002;
@@ -56,6 +61,18 @@ internal static partial class NativeMethods
     {
         public int X;
         public int Y;
+    }
+
+    /// <summary>Request/response block for SHAppBarMessage.</summary>
+    [StructLayout(LayoutKind.Sequential)]
+    public struct APPBARDATA
+    {
+        public uint cbSize;
+        public IntPtr hWnd;
+        public uint uCallbackMessage;
+        public uint uEdge;
+        public RECT rc;
+        public IntPtr lParam;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -195,6 +212,23 @@ internal static partial class NativeMethods
 
     [LibraryImport("dwmapi.dll")]
     public static partial int DwmGetWindowAttribute(IntPtr hwnd, int attribute, out RECT value, int size);
+
+    [LibraryImport("dwmapi.dll", EntryPoint = "DwmGetWindowAttribute")]
+    public static partial int DwmGetWindowAttributeInt(IntPtr hwnd, int attribute, out int value, int size);
+
+    [LibraryImport("dwmapi.dll")]
+    public static partial int DwmSetWindowAttribute(IntPtr hwnd, int attribute, ref int value, int size);
+
+    [LibraryImport("shell32.dll")]
+    public static partial IntPtr SHAppBarMessage(uint message, ref APPBARDATA data);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool GetWindowDisplayAffinity(IntPtr hwnd, out uint affinity);
+
+    [LibraryImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static partial bool SetLayeredWindowAttributes(IntPtr hwnd, uint colorKey, byte alpha, uint flags);
 
     // --- Backdrop window (edge matting) ---
     public const uint WS_POPUP = 0x80000000;

@@ -131,6 +131,20 @@ public sealed class SessionCoordinator : ICollisionPrompt, IFeedbackSink, IAsync
         _ui.StateChanged();
     }
 
+    /// <summary>
+    /// Another copy of the app was launched during the session. The window stays hidden while a session runs (the tray is the control
+    /// surface), so this says why nothing opened. A warning: it uses the warning sound and doesn't replace a lingering "paused" toast.
+    /// </summary>
+    public void ReportSecondLaunch()
+    {
+        if (IsRunning)
+        {
+            Notify(new FeedbackEvent(
+                FeedbackKind.Warning,
+                $"Screenshot Helper is already running a session — use the tray icon, or {_services.Describe(HotkeyAction.EndSession)} to end it"));
+        }
+    }
+
     public void TogglePause()
     {
         if (Phase is not (SessionPhase.Active or SessionPhase.Paused))

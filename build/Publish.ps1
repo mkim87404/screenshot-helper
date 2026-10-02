@@ -10,8 +10,9 @@
         pwsh build/Publish.ps1 -Version 1.2.0 -Runtimes win-x64
     Output (artifacts/):
         ScreenshotHelper-<version>-<rid>.exe   single-file app, runs without installing anything
-        ScreenshotHelper-<version>-<rid>.zip   the same exe plus README and LICENSE (portable)
+        ScreenshotHelper-<version>-<rid>.zip   the same exe ("Screenshot Helper.exe") plus README and LICENSE (portable)
         SHA256SUMS.txt                          checksums for verifying downloads
+    Download names keep the unspaced form: GitHub turns spaces in release asset names into dots.
 #>
 [CmdletBinding()]
 param(
@@ -39,18 +40,20 @@ foreach ($rid in $Runtimes) {
     Write-Host "==> Publishing $rid ($Version)" -ForegroundColor Cyan
     $publishDir = Join-Path $artifacts "publish-$rid"
     # Single-file + self-contained: one exe, no runtime install. Native Skia/HarfBuzz libraries are bundled and extracted on first run.
+    # ReadyToRun precompiles the app and Avalonia, which otherwise JIT-compile on every launch (the bulk of start-up time); see
+    # docs/DECISIONS.md for the measurements behind ReadyToRun + compression.
     dotnet publish "$root/src/ScreenshotHelper.App/ScreenshotHelper.App.csproj" `
         --configuration Release --runtime $rid --self-contained true --output $publishDir `
         -p:Version=$Version -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true `
-        -p:EnableCompressionInSingleFile=true -p:DebugType=embedded
+        -p:EnableCompressionInSingleFile=true -p:PublishReadyToRun=true -p:DebugType=embedded
     if ($LASTEXITCODE -ne 0) { throw "Publish for $rid failed." }
 
     $exe = Join-Path $artifacts "ScreenshotHelper-$Version-$rid.exe"
-    Copy-Item (Join-Path $publishDir 'ScreenshotHelper.exe') $exe
+    Copy-Item (Join-Path $publishDir 'Screenshot Helper.exe') $exe
 
     $staging = Join-Path $artifacts "zip-$rid"
     New-Item -ItemType Directory -Path $staging | Out-Null
-    Copy-Item (Join-Path $publishDir 'ScreenshotHelper.exe') $staging
+    Copy-Item (Join-Path $publishDir 'Screenshot Helper.exe') $staging
     Copy-Item "$root/README.md", "$root/LICENSE" $staging
     Compress-Archive -Path "$staging/*" -DestinationPath (Join-Path $artifacts "ScreenshotHelper-$Version-$rid.zip")
     Remove-Item $staging, $publishDir -Recurse -Force

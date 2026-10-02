@@ -107,6 +107,9 @@ Hotkey thread ──► Channel<Command> ──► Session actor (single consume
 
 Settings → "When a sub number is taken": **Ask** (default) / Append / Insert.
 
+- Keyboard: the prompt opens with **Append** highlighted; the choices can be moved between and picked from the keyboard, and closing
+  it without choosing discards (keys: [README, Features](../README.md#-features)).
+
 ## 6. In-session modes
 
 - **Pause:** unregisters every key except pause/resume, so everything else types normally. Tray click also toggles pause.
@@ -124,7 +127,8 @@ Settings → "When a sub number is taken": **Ask** (default) / Append / Insert.
 ## 7. Feedback: sound + visual for every event
 
 Every event has a sound and a toast; persistent states also show on the tray icon. The toast is small, click-through, never takes
-focus, is excluded from screen capture (`WDA_EXCLUDEFROMCAPTURE`), and its corner is configurable.
+focus, is excluded from screen capture (`WDA_EXCLUDEFROMCAPTURE`), and its corner is configurable. It appears in that corner of the
+screen under the mouse and disappears after 2.2 s (errors: 5 s); a new message replaces the current one and restarts the timer.
 
 | Event | Sound | Toast | Tray icon |
 |---|---|---|---|
@@ -136,9 +140,16 @@ focus, is excluded from screen capture (`WDA_EXCLUDEFROMCAPTURE`), and its corne
 | Paused / resumed | low / high click | "⏸ Paused" / "▶ Resumed" | paused (grey) / active |
 | Undo | reverse sweep | "↶ Removed 6-2" | — |
 | Warning (nothing saved or changed) | double blip | explanation | — |
+| App launched again during a session | double blip (warning) | "Screenshot Helper is already running a session — use the tray icon, or *end-session key* to end it" | — |
 | Error (capture/save failed, folder gone) | low buzz | error text | error (red) until the next success |
-| Session ended | falling chime | — | — |
+| Session ended | falling chime | "Session ended — 3 screenshots" | — |
 
+- **"Paused" stays on screen** until the session resumes or ends; any message shown meanwhile disappears back to it. The capture keys
+  do nothing while paused (§6), so the state must not be missable.
+- The toast window has a fixed size and is placed before it appears; only the message card inside it changes, so it never moves or
+  resizes while visible. It keeps clear of an auto-hide taskbar (or other auto-hide bar) on any edge and of any thickness, which would otherwise cover it
+  whenever it slides out
+  ([why](DECISIONS.md#2026-10-02-utc)).
 - **The main/sub sound plays if and only if the PNG is flushed and in place.** Caveats keep that sound and only tint the toast.
 - The warning sound means attention is needed and nothing was saved or changed (discarded shot, nothing to undo/annotate, keys in use).
 - Sounds are synthesised in code at start-up and re-rendered when the volume changes. Settings: sounds on/off, volume, per-event on/off, toasts on/off and corner.
@@ -149,14 +160,28 @@ focus, is excluded from screen capture (`WDA_EXCLUDEFROMCAPTURE`), and its corne
 - **End session:** if at least one shot was saved, Explorer opens with all this session's files selected, lowest number first (fallback: select the lowest-numbered file, then open the folder). The window then shows the **Session Summary** (count, files, Show in Explorer, Renumber these…, New session).
 - Settings: **Open the folder when a session ends** (default on), **Exit the app when a session ends** (default off).
 - **Session ledger:** tracks each file the session created through every rename the app makes, for Reveal and "lowest numbered". Files changed outside the app are skipped.
-- **Recent folders:** last 10, on the Session tab; missing paths are marked and removable.
+- **Recent folders:** last 10, on the Session tab; missing paths are marked and removable. A path too long for the window is shortened
+  in the middle (drive and last folder kept); its tooltip, and the folder boxes' tooltips, show the full path.
+- **Windows appear only once drawn:** the main window, the caption box, the collision prompt and the toast are shown cloaked, then
+  fade in (180 ms) once their first frame is drawn, so no empty or stale frame is ever visible ([why](DECISIONS.md#2026-10-02-utc)).
 - **Navigation:** app-bar tabs **Session** (setup + summary), **Renumber**, **Settings**; the current tab is underlined.
+- **Start session** sits in an action bar pinned below the Session tab's scrolling content, with any start error above it, so it stays in
+  view however long the page gets. It's the tab's default button and has an access key (keys: [README, How to use](../README.md#-how-to-use)).
 - **Window size:** the last normal size and maximized flag are remembered; the position is not (always centred). Default 900×860, clamped to 95 % of the working area; minimum 720×560, reduced on smaller screens.
-- **Single instance:** a second launch activates the running one.
+- **Single instance:** a second launch activates the running one. During a session the window stays hidden, so the running one shows
+  the "already running" warning toast instead (§7).
 
 ## 9. Renumber tool
 
 Files are listed by group with multi-select (whole-group toggle) and a thumbnail preview.
+- **Which folder:** switching to the tab opens the Session tab's folder if that changed since the last visit; otherwise the tab keeps
+  the folder it shows, including one chosen with its own Browse. Opening it from a session summary shows that folder with the
+  session's files pre-selected.
+- **Staying current:** the list is checked against the folder (one directory listing) on every switch to the tab and whenever the
+  window is activated again while the tab is shown (e.g. after renaming files in Explorer). It's rebuilt, with the selection carried
+  over, only if the folder's screenshots changed. Apply, Undo and **Reload** always rebuild it. Changes made while the app stays in
+  front aren't watched for; **Reload** picks them up.
+- Only the rows in view are built, so a large folder opens quickly.
 
 | Operation | Example |
 |---|---|
@@ -179,17 +204,15 @@ Files are listed by group with multi-select (whole-group toggle) and a thumbnail
 
 - Undo last shot: sends the file to the Recycle Bin, reverts the solo→member rename it caused, rewinds the numbering.
 - Log (`%LOCALAPPDATA%\ScreenshotHelper\logs`): one file per UTC day, pruned to 30 days at start-up. Corrupt-settings backups: newest 3 kept.
-- Settings are saved immediately; **Reset everything to defaults** (recent folders and window size are kept).
+- Settings are saved immediately; **Reset everything to defaults** (recent folders and window size are kept). A settings file missing
+  some keys (written by an older version, or edited by hand) gets the defaults for those keys.
 - Light/dark theme; app icon generated by `tools/generate-icon.cs`.
 - `SCREENSHOTHELPER_HOME` redirects all app data to one folder.
 - Every setting and its default: the [README's Settings table](../README.md#%EF%B8%8F-settings) (the user guide is their single source).
 
-## 11. Roadmap (not v1)
+## 11. Roadmap
 
-- Output formats (JPEG/WebP), region capture, delay timer
-- Portable mode, start with Windows
-- winget / Scoop packages (after the first public release)
-- macOS port (`Platform.MacOS`), Linux port (`Platform.Linux`, X11 first)
+Planned work is listed in the [README's Roadmap](../README.md#-roadmap).
 
 ## 12. Architecture
 
@@ -212,5 +235,5 @@ Background: [decision log, 2026-09-26](DECISIONS.md#2026-09-26-utc).
 ## 13. Distribution
 
 - **`ci.yml`:** build + test on every push and PR (full suite on Windows, Core on Ubuntu).
-- **`release.yml`:** on a `v*.*.*` tag, **only in a public repository** — tests, then self-contained single-file exes for win-x64 and win-arm64, portable zips, `SHA256SUMS.txt`, a build-provenance attestation, and a GitHub Release with generated notes.
+- **`release.yml`:** on a `v*.*.*` tag, **only in a public repository** — tests, then self-contained, ReadyToRun-precompiled single-file exes for win-x64 and win-arm64, portable zips, `SHA256SUMS.txt`, a build-provenance attestation, and a GitHub Release with generated notes.
 - Builds are unsigned; the README covers the SmartScreen prompt and how to verify a download.

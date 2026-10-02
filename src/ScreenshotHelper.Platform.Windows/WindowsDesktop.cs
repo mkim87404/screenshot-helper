@@ -36,7 +36,104 @@ public static class WindowsDesktop
         var style = GetWindowLongPtr(hwnd, GWL_EXSTYLE).ToInt64();
         style |= WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_TRANSPARENT | WS_EX_LAYERED;
         SetWindowLongPtr(hwnd, GWL_EXSTYLE, new IntPtr(style));
+
+        // Click-through needs WS_EX_LAYERED, and a layered window's appearance is only defined once SetLayeredWindowAttributes (or
+        // UpdateLayeredWindow) has been called; fully opaque here, since the window's own content supplies the transparency.
+        SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
         ExcludeFromCapture(hwnd);
+    }
+
+    /// <summary>
+    /// Keeps a window off the screen (or puts it back) without hiding it: a cloaked window stays visible to Windows, keeps rendering and
+    /// can hold focus, DWM just doesn't compose it (DWMWA_CLOAK, Windows 8+). Returns false if the window couldn't be cloaked.
+    /// </summary>
+    public static bool SetCloaked(IntPtr hwnd, bool cloaked)
+    {
+        var value = cloaked ? 1 : 0;
+        return hwnd != IntPtr.Zero && DwmSetWindowAttribute(hwnd, DWMWA_CLOAK, ref value, sizeof(int)) == 0;
+    }
+
+    /// <summary>
+    /// Starts a fade-in: makes the window layered (if it isn't already) and fully transparent. Returns whether it was layered before, for
+    /// <see cref="EndFadeIn"/>. Layered opacity applies to the whole window, title bar included.
+    /// </summary>
+    public static bool BeginFadeIn(IntPtr hwnd)
+    {
+        if (hwnd == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        var style = GetWindowLongPtr(hwnd, GWL_EXSTYLE).ToInt64();
+        var wasLayered = (style & WS_EX_LAYERED) != 0;
+        if (!wasLayered)
+        {
+            SetWindowLongPtr(hwnd, GWL_EXSTYLE, new IntPtr(style | WS_EX_LAYERED));
+        }
+
+        SetLayeredWindowAttributes(hwnd, 0, 0, LWA_ALPHA);
+        return wasLayered;
+    }
+
+    /// <summary>Sets the whole window's opacity (0–255) during a fade started by <see cref="BeginFadeIn"/>.</summary>
+    public static void SetFadeOpacity(IntPtr hwnd, byte alpha)
+    {
+        if (hwnd != IntPtr.Zero)
+        {
+            SetLayeredWindowAttributes(hwnd, 0, alpha, LWA_ALPHA);
+        }
+    }
+
+    /// <summary>Ends a fade: fully opaque, and no longer layered if it wasn't before (layering costs a little on every frame).</summary>
+    public static void EndFadeIn(IntPtr hwnd, bool wasLayered)
+    {
+        if (hwnd == IntPtr.Zero)
+        {
+            return;
+        }
+
+        SetLayeredWindowAttributes(hwnd, 0, 255, LWA_ALPHA);
+        if (!wasLayered)
+        {
+            var style = GetWindowLongPtr(hwnd, GWL_EXSTYLE).ToInt64();
+            SetWindowLongPtr(hwnd, GWL_EXSTYLE, new IntPtr(style & ~WS_EX_LAYERED));
+        }
+    }
+
+    /// <summary>Whether DWM is currently keeping the window off the screen (cloaked by this app, the shell or a virtual desktop).</summary>
+    public static bool IsCloaked(IntPtr hwnd) =>
+        hwnd != IntPtr.Zero && DwmGetWindowAttributeInt(hwnd, DWMWA_CLOAKED, out var cloaked, sizeof(int)) == 0 && cloaked != 0;
+
+    /// <summary>Whether the window is currently excluded from screen capture (for tests and diagnostics).</summary>
+    public static bool IsExcludedFromCapture(IntPtr hwnd) =>
+        hwnd != IntPtr.Zero && GetWindowDisplayAffinity(hwnd, out var affinity) && affinity == WDA_EXCLUDEFROMCAPTURE;
+
+    /// <summary>
+    /// How far an auto-hide taskbar (or other auto-hide app bar) reaches into each edge of a monitor when it slides out, in physical
+    /// pixels. Windows counts an auto-hide taskbar's area as part of the working area, so a window placed in that corner is covered
+    /// whenever the taskbar is shown (taskbar focused or the mouse at that edge).
+    /// </summary>
+    public static (int Left, int Top, int Right, int Bottom) AutoHideBarInsets(System.Drawing.Rectangle monitor)
+    {
+        int Thickness(uint edge)
+        {
+            var data = new APPBARDATA
+            {
+                cbSize = (uint)System.Runtime.InteropServices.Marshal.SizeOf<APPBARDATA>(),
+                uEdge = edge,
+                rc = new RECT { Left = monitor.Left, Top = monitor.Top, Right = monitor.Right, Bottom = monitor.Bottom },
+            };
+            var bar = SHAppBarMessage(ABM_GETAUTOHIDEBAREX, ref data);
+            if (bar == IntPtr.Zero || !GetWindowRect(bar, out var r))
+            {
+                return 0;
+            }
+
+            // A hidden bar keeps its size and slides off screen, so its size (not its position) says how far it reaches in.
+            return edge is ABE_LEFT or ABE_RIGHT ? r.Right - r.Left : r.Bottom - r.Top;
+        }
+
+        return (Thickness(ABE_LEFT), Thickness(ABE_TOP), Thickness(ABE_RIGHT), Thickness(ABE_BOTTOM));
     }
 
     /// <summary>Hides a window from every screen capture API that honours display affinity (including our own capture).</summary>

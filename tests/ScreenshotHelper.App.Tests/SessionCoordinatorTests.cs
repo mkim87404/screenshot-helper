@@ -101,7 +101,7 @@ public class SessionCoordinatorTests
         coordinator.Start(Options(folder, 5, StartMode.ContinueGroup, 1));
 
         h.Hotkeys.Press(HotkeyAction.SubShot);
-        await WaitUntil(() => coordinator.Phase == SessionPhase.Modal);
+        await TestWait.Until(() => coordinator.Phase == SessionPhase.Modal);
         await coordinator.EndAsync().WaitAsync(TimeSpan.FromSeconds(10), TestContext.Current.CancellationToken);
 
         Assert.Equal(1, ui.PromptsClosed);
@@ -141,6 +141,29 @@ public class SessionCoordinatorTests
         Assert.Equal(1, ui.PromptsClosed);
         Assert.Null(ui.RegisteredDuringCaption);
         Assert.Equal(["5-1.png"], folder.Names());
+    }
+
+    [Fact]
+    public async Task A_second_launch_during_a_session_explains_itself_with_a_warning_toast()
+    {
+        using var h = new ServicesHarness();
+        using var folder = new TempDir();
+        var ui = new FakeSessionUi();
+        await using var coordinator = new SessionCoordinator(h.Services, ui, action => action());
+
+        // Outside a session the window simply opens, so there's nothing to say.
+        coordinator.ReportSecondLaunch();
+        Assert.Empty(ui.Toasts);
+
+        coordinator.Start(Options(folder, 1));
+        h.Hotkeys.Press(HotkeyAction.PauseResume);
+        coordinator.ReportSecondLaunch();
+
+        var toast = ui.Toasts[^1];
+        Assert.Equal(FeedbackKind.Warning, toast.Kind);
+        Assert.Contains("already running", toast.Message, StringComparison.Ordinal);
+        Assert.Contains(h.Services.Describe(HotkeyAction.EndSession), toast.Message, StringComparison.Ordinal);
+        await coordinator.EndAsync();
     }
 
     [Fact]
@@ -196,16 +219,6 @@ public class SessionCoordinatorTests
 
     private static SessionOptions Options(TempDir folder, int main, StartMode mode = StartMode.NewGroup, int sub = 1) =>
         new(folder.Path, mode, main, sub, CaptureTarget.PrimaryMonitor);
-
-    private static async Task WaitUntil(Func<bool> condition)
-    {
-        var deadline = DateTime.UtcNow.AddSeconds(10);
-        while (!condition())
-        {
-            Assert.True(DateTime.UtcNow < deadline, "Timed out waiting for the condition.");
-            await Task.Delay(10, TestContext.Current.CancellationToken);
-        }
-    }
 
     // Runs everything posted to the fake UI thread so far, in order.
     private static void PumpUi(ConcurrentQueue<Action> queue)

@@ -26,17 +26,6 @@ public partial class App : Application, IDisposable
     private AvaloniaSessionUi? _sessionUi;
     private bool _shuttingDown;
 
-    /// <summary>Called by <see cref="Program"/> before the lifetime starts (the previewer and tests skip it and get defaults).</summary>
-    public static void Configure(AppPaths paths, AppLog log)
-    {
-        s_paths = paths;
-        s_log = log;
-    }
-
-    /// <summary>A second launch asked this instance to show itself (called on a thread-pool thread).</summary>
-    public static void RequestActivation() =>
-        Dispatcher.UIThread.Post(() => (Current as App)?.ShowMainWindow());
-
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
     public void Dispose()
@@ -83,10 +72,22 @@ public partial class App : Application, IDisposable
 
             desktop.ShutdownRequested += OnShutdownRequested;
             desktop.Exit += (_, _) => DisposeServices();
-            _mainWindow.Show();
+            WindowReveal.ShowWhenDrawn(_mainWindow);
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    /// <summary>Shows the window, or during a session (when it stays hidden) a toast saying the app is already running.</summary>
+    private void OnSecondLaunch()
+    {
+        if (_coordinator is { IsRunning: true })
+        {
+            _coordinator.ReportSecondLaunch();
+            return;
+        }
+
+        ShowMainWindow();
     }
 
     private void ShowMainWindow()
@@ -97,7 +98,11 @@ public partial class App : Application, IDisposable
             return;
         }
 
-        _mainWindow.Show();
+        if (!_mainWindow.IsVisible)
+        {
+            WindowReveal.ShowWhenDrawn(_mainWindow);
+        }
+
         if (_mainWindow.WindowState == WindowState.Minimized)
         {
             _mainWindow.WindowState = WindowState.Normal;
@@ -197,4 +202,15 @@ public partial class App : Application, IDisposable
         _sessionUi?.ShowToast(new Core.Feedback.FeedbackEvent(Core.Feedback.FeedbackKind.Error, "Something went wrong — see the log for details"));
         e.Handled = true;
     }
+
+    /// <summary>Called by <see cref="Program"/> before the lifetime starts (the previewer and tests skip it and get defaults).</summary>
+    public static void Configure(AppPaths paths, AppLog log)
+    {
+        s_paths = paths;
+        s_log = log;
+    }
+
+    /// <summary>A second launch asked this instance to show itself (called on a thread-pool thread).</summary>
+    public static void RequestActivation() =>
+        Dispatcher.UIThread.Post(() => (Current as App)?.OnSecondLaunch());
 }

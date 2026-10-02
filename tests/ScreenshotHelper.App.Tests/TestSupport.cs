@@ -208,3 +208,17 @@ internal sealed class ServicesHarness : IDisposable
 
     public void Dispose() => Data.Dispose();
 }
+
+/// <summary>Polls a condition while the test (and, in headless tests, the dispatcher) keeps running; fails the test on timeout.</summary>
+internal static class TestWait
+{
+    public static async Task Until(Func<bool> condition, int timeoutSeconds = 10)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(timeoutSeconds);
+        while (!condition())
+        {
+            Assert.True(DateTime.UtcNow < deadline, "Timed out waiting for the condition.");
+            await Task.Delay(10, TestContext.Current.CancellationToken);
+        }
+    }
+}

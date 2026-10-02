@@ -44,6 +44,7 @@ public sealed partial class RenumberViewModel : ObservableObject, IDisposable
     private readonly Func<Task<string?>> _pickFolder;
     private FolderIndex? _index;
     private RenumberPlan? _plan;
+    private bool _opening;
 
     public RenumberViewModel(AppServices services, Func<Task<string?>> pickFolder)
     {
@@ -108,14 +109,45 @@ public sealed partial class RenumberViewModel : ObservableObject, IDisposable
 
     public string SelectionSummary => $"{Files.Count(f => f.IsSelected)} of {Files.Count} selected";
 
-    /// <summary>Opens the tool on a folder, optionally pre-selecting files (e.g. the session just finished).</summary>
+    /// <summary>
+    /// Opens the tool on a folder, optionally pre-selecting files (e.g. the session just finished). Re-opening the folder already shown
+    /// (switching back to the tab) keeps its list and selection, and rebuilds the list only if the folder's screenshots changed.
+    /// </summary>
     public void Open(string folder, IReadOnlyCollection<string>? preselect = null)
     {
-        Folder = folder;
+        if (preselect is null && _index is not null && string.Equals(Folder, folder, StringComparison.OrdinalIgnoreCase))
+        {
+            // One directory listing is cheap; rebuilding hundreds of rows on every tab switch is what made it lag.
+            var current = TryScan(folder);
+            if (current is null || !current.Shots.Select(s => s.FileName).SequenceEqual(_index.Shots.Select(s => s.FileName), StringComparer.Ordinal))
+            {
+                Load(Files.Where(f => f.IsSelected).Select(f => f.FileName).ToList(), current);
+            }
+
+            return;
+        }
+
+        // Setting Folder would load the list on its own; load once, with the pre-selection.
+        _opening = true;
+        try
+        {
+            Folder = folder;
+        }
+        finally
+        {
+            _opening = false;
+        }
+
         Load(preselect);
     }
 
-    partial void OnFolderChanged(string? value) => Load(null);
+    partial void OnFolderChanged(string? value)
+    {
+        if (!_opening)
+        {
+            Load(null);
+        }
+    }
 
     partial void OnOperationChanged(Choice<RenumberKind> value)
     {
@@ -228,7 +260,8 @@ public sealed partial class RenumberViewModel : ObservableObject, IDisposable
 
     private bool HasFolder() => Folder is not null;
 
-    private void Load(IReadOnlyCollection<string>? preselect)
+    /// <summary>Rebuilds the file list, using <paramref name="scanned"/> if the folder was just scanned.</summary>
+    private void Load(IReadOnlyCollection<string>? preselect, FolderIndex? scanned = null)
     {
         foreach (var old in Files)
         {
@@ -246,7 +279,7 @@ public sealed partial class RenumberViewModel : ObservableObject, IDisposable
 
         try
         {
-            _index = FolderIndex.Scan(Folder);
+            _index = scanned ?? FolderIndex.Scan(Folder);
         }
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
         {
@@ -314,5 +347,18 @@ public sealed partial class RenumberViewModel : ObservableObject, IDisposable
     {
         Message = message;
         MessageIsError = isError;
+    }
+
+    /// <summary>Scans a folder, or returns null if it can't be read (the following load reports why).</summary>
+    private static FolderIndex? TryScan(string folder)
+    {
+        try
+        {
+            return FolderIndex.Scan(folder);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or ArgumentException)
+        {
+            return null;
+        }
     }
 }

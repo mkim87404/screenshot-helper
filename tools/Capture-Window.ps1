@@ -5,8 +5,8 @@
 .DESCRIPTION
     Dependencies: PowerShell 7+ on Windows (System.Drawing and WinForms are included). No modules to install.
     Run from the repo root:
-        pwsh tools/Capture-Window.ps1 -ProcessName ScreenshotHelper -Output .github/media/home.png
-        pwsh tools/Capture-Window.ps1 -ProcessName ScreenshotHelper -Title "Caption for 5" -Output caption.png
+        pwsh tools/Capture-Window.ps1 -ProcessName 'Screenshot Helper' -Output .github/media/home.png
+        pwsh tools/Capture-Window.ps1 -ProcessName 'Screenshot Helper' -Title "Caption for 5" -Output caption.png
         pwsh tools/Capture-Window.ps1 -Output screen.png            # whole primary screen, no matting
 
     Why the matting: Windows 11 windows have rounded corners and a semi-transparent 1-px border, so a plain capture bakes whatever was

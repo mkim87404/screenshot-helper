@@ -11,7 +11,7 @@ namespace ScreenshotHelper.App.Services;
 
 /// <summary>
 /// The system-tray icon: during a session it shows the state (active / paused / armed / error) as a badge and exposes session controls,
-/// so the hidden main window isn't needed. Badged icons are drawn once at start-up from the app icon.
+/// so the hidden main window isn't needed. Each badged icon is drawn from the app icon on first use and cached.
 /// </summary>
 public sealed class TrayController : IDisposable
 {
@@ -26,6 +26,12 @@ public sealed class TrayController : IDisposable
     private readonly NativeMenuItem _end = new("End session");
     private readonly NativeMenuItem _show = new("Show Screenshot Helper");
     private readonly List<(NativeMenuItem Item, CaptureTarget Target)> _targets = [];
+
+    /// <summary>
+    /// The base image for every tray icon. The resource host is the assembly name ("Screenshot Helper", with its space), so it's read
+    /// from the assembly rather than written out: a hard-coded name broke start-up when the exe was renamed.
+    /// </summary>
+    internal static Uri AppIconUri { get; } = new($"avares://{typeof(TrayController).Assembly.GetName().Name}/Assets/app-256.png");
 
     public TrayController(Application app, AppServices services, SessionCoordinator coordinator, Action showWindow, Action exit)
     {
@@ -133,7 +139,7 @@ public sealed class TrayController : IDisposable
             return cached;
         }
 
-        using var baseStream = AssetLoader.Open(new Uri("avares://ScreenshotHelper/Assets/app-256.png"));
+        using var baseStream = AssetLoader.Open(AppIconUri);
         using var baseImage = new Bitmap(baseStream);
         const int size = 64;
         using var target = new RenderTargetBitmap(new PixelSize(size, size));

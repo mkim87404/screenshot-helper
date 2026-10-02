@@ -2,10 +2,14 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="ScreenshotHelper.App.Views.ToastWindow"
         Title="Screenshot Helper notification"
-        SizeToContent="WidthAndHeight" MaxWidth="460"
+        Width="460" Height="200"
         WindowDecorations="None" ShowInTaskbar="False" ShowActivated="False" Topmost="True" CanResize="False"
         Background="Transparent" TransparencyLevelHint="Transparent">
-  <Border x:Name="Card" CornerRadius="10" Padding="14,10" Background="#F21D2029" BorderThickness="0,0,0,3" BorderBrush="#16A34A">
-    <TextBlock x:Name="MessageText" Foreground="White" FontSize="14" TextWrapping="Wrap" MaxWidth="420" />
+  <!-- A fixed-size, see-through, click-through window: the card sits in the window's corner nearest the screen corner, so a longer or
+       shorter message changes only the card, never the window's size or position. -->
+  <Border x:Name="Card" CornerRadius="10" Padding="14,10" Background="#F21D2029" BorderThickness="0,0,0,3" BorderBrush="#16A34A"
+          HorizontalAlignment="Right" VerticalAlignment="Bottom">
+    <TextBlock x:Name="MessageText" Foreground="White" FontSize="14" TextWrapping="Wrap" MaxWidth="420" MaxLines="7"
+               TextTrimming="CharacterEllipsis" />
   </Border>
 </Window>

@@ -12,7 +12,8 @@
     </StackPanel>
 
     <Grid Grid.Row="1" Grid.ColumnSpan="3" ColumnDefinitions="*,Auto,Auto" Margin="0,12">
-      <TextBox Text="{Binding Folder}" IsReadOnly="True" PlaceholderText="No folder chosen" AutomationProperties.Name="Folder to renumber" />
+      <TextBox Text="{Binding Folder}" IsReadOnly="True" PlaceholderText="No folder chosen" ToolTip.Tip="{Binding Folder}"
+               AutomationProperties.Name="Folder to renumber" />
       <Button Grid.Column="1" Margin="8,0,0,0" Content="Browse…" Command="{Binding BrowseCommand}" />
       <Button Grid.Column="2" Margin="8,0,0,0" Content="Reload" Command="{Binding RefreshCommand}" />
     </Grid>
@@ -32,6 +33,12 @@
         </Border>
         <ScrollViewer>
           <ItemsControl ItemsSource="{Binding Files}">
+            <!-- Only the rows in view are built: a folder can hold hundreds of screenshots, and building every row made the tab lag. -->
+            <ItemsControl.ItemsPanel>
+              <ItemsPanelTemplate>
+                <VirtualizingStackPanel />
+              </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
             <ItemsControl.ItemTemplate>
               <DataTemplate x:DataType="vm:RenumberFileViewModel">
                 <StackPanel>

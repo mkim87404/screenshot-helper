@@ -73,6 +73,39 @@ public class SettingsStoreTests
     }
 
     [Fact]
+    public void Settings_missing_from_the_file_keep_their_defaults()
+    {
+        // A file written by an older version (or edited by hand) lacks some keys: each must load at its default, not as false or 0.
+        using var dir = new TempFolder();
+        var store = new SettingsStore(dir.Path, AppLog.Null);
+        File.WriteAllText(store.SettingsPath, """{ "theme": "Dark" }""");
+        File.WriteAllText(store.StatePath, """{ "windowMaximized": true }""");
+
+        var settings = store.LoadSettings();
+        var state = store.LoadState();
+
+        Assert.Equal(AppTheme.Dark, settings.Theme);
+        Assert.True(settings.ToastsEnabled);
+        Assert.True(settings.SoundsEnabled);
+        Assert.True(settings.OpenFolderOnSessionEnd);
+        Assert.Equal(AppSettings.Default.SoundVolume, settings.SoundVolume);
+        Assert.Equal(AppSettings.Default.AnnotationTarget, settings.AnnotationTarget);
+        Assert.True(state.WindowMaximized);
+        Assert.Empty(state.RecentFolders);
+    }
+
+    [Fact]
+    public void A_settings_file_that_isnt_an_object_is_quarantined()
+    {
+        using var dir = new TempFolder();
+        var store = new SettingsStore(dir.Path, AppLog.Null);
+        File.WriteAllText(store.SettingsPath, "[1, 2]");
+
+        Assert.Equal(AppSettings.Default.Theme, store.LoadSettings().Theme);
+        Assert.Single(Directory.GetFiles(dir.Path, "settings.json.corrupt-*"));
+    }
+
+    [Fact]
     public void Recent_folders_are_most_recent_first_deduplicated_and_capped()
     {
         var state = new AppState();

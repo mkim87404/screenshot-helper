@@ -15,6 +15,7 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         _normalSize = WindowSizing.Default;
+        Activated += (_, _) => (DataContext as ViewModels.MainWindowViewModel)?.WindowActivated();
     }
 
     /// <summary>The size to remember (the last un-maximized size) and whether the window is maximized.</summary>

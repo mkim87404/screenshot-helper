@@ -236,6 +236,34 @@ public class WindowCaptureTests
     }
 
     [Fact]
+    public void Cloaking_round_trips_on_a_real_window()
+    {
+        // The backdrop window is a real top-level window that stays hidden here, so nothing appears on screen.
+        using var window = new Interop.BackdropWindow();
+
+        Assert.True(WindowsDesktop.SetCloaked(window.Handle, true));
+        Assert.True(WindowsDesktop.IsCloaked(window.Handle));
+        Assert.True(WindowsDesktop.SetCloaked(window.Handle, false));
+        Assert.False(WindowsDesktop.IsCloaked(window.Handle));
+        Assert.False(WindowsDesktop.SetCloaked(IntPtr.Zero, true));
+    }
+
+    [Fact]
+    public void Passive_overlay_is_click_through_never_activated_and_excluded_from_capture()
+    {
+        using var window = new Interop.BackdropWindow();
+        Assert.False(WindowsDesktop.IsExcludedFromCapture(window.Handle));
+
+        WindowsDesktop.MakePassiveOverlay(window.Handle);
+
+        var style = Interop.NativeMethods.GetWindowLongPtr(window.Handle, Interop.NativeMethods.GWL_EXSTYLE).ToInt64();
+        const long expected = Interop.NativeMethods.WS_EX_LAYERED | Interop.NativeMethods.WS_EX_TRANSPARENT
+                              | Interop.NativeMethods.WS_EX_NOACTIVATE | Interop.NativeMethods.WS_EX_TOOLWINDOW;
+        Assert.Equal(expected, style & expected);
+        Assert.True(WindowsDesktop.IsExcludedFromCapture(window.Handle));
+    }
+
+    [Fact]
     [Trait("Category", TestCategories.Disruptive)]
     public void Backdrop_window_shows_and_hides_without_taking_focus()
     {

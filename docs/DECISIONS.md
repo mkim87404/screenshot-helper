@@ -3,6 +3,203 @@
 Decisions with their justification, empirical findings, hurdles and assumptions, newest first. Entries are history: a later
 change is recorded as a new entry rather than by rewriting an old one. Current behaviour is specified in [SPEC.md](SPEC.md).
 
+## 2026-10-02 (UTC)
+
+### Release v1.1.0
+- **Minor bump (1.0.0 → 1.1.0):** this release adds features (already-running toast, `Alt+S`, arrow keys in the collision prompt, a
+  persistent Paused toast, a Renumber tab that keeps its state) and fixes, with nothing incompatible. Settings, data folders, keys and
+  release asset names are unchanged. The exe inside the zip is renamed to `Screenshot Helper.exe`, which only affects a pinned
+  shortcut, and the README's update steps say so. Not treated as breaking: the standalone download's name already changes with every
+  version.
+- **CI and release path unchanged:** `ci.yml` needs nothing new, and the tag-driven `release.yml` (see [v1.0.0](#first-public-release-v100))
+  still builds the release. ReadyToRun adds no workflow step: `Publish.ps1` passes it, and the ARM64 build precompiles on the x64 runner.
+- **Pre-release check:** after `dotnet clean`, `build/Build.ps1` passed with 0 warnings (220 tests: Core 136, App 57, Platform.Windows 27).
+  A local `build/Publish.ps1` run produced x64 and ARM64 exes reporting 1.1.0 with the file description "Screenshot Helper"
+  (x64 64 MB, ARM64 62 MB, up from 48 MB with ReadyToRun as expected). The x64 exe showed its window in about 0.9 s on a first launch.
+
+### "Already running" toast for a second launch during a session
+- Only one instance runs; a second launch asks it to show its window and exits. During a session the window stays hidden (the tray is
+  the control surface), so a second launch looked like it did nothing. The running instance now shows a toast saying it's already
+  running a session, naming the tray icon and the end-session key.
+- It goes through the normal feedback path as a **Warning** (the existing "attention, nothing happened" kind), so it gets the warning
+  sound and respects the sound and toast settings. It also gets every toast guard: kept clear of an auto-hide taskbar, click-through,
+  never activated, excluded from capture. Not adding a new kind avoids a new sound, a new per-event toggle and its tests for one
+  message.
+- A Warning doesn't clear the lingering "Paused" toast, so during a pause the message shows and then falls back to "Paused".
+- Covered by a coordinator test and by `tools/Check-SessionWindows.ps1`: while paused, it launches a second copy, checks it exits,
+  checks the toast reads "already running" and passes every toast guard, and checks it falls back to "Paused". The check fails against
+  the previous build.
+
+### Settings: spacing between key labels and key boxes
+- The label column (200 px) ran straight into the key box with no gap, so descriptions wrapped right up to its border while their
+  left edge had the card's 20 px padding. Untidy. The label column is now 260 px and ends with a 20 px gap
+  (the card padding), so text never meets the box and most descriptions fit on one line. The label stays close enough to its box to
+  read as one row. Checked in captures of both themes.
+
+### Other "rebuilt every time" spots, and Start session in view
+- **Swept after the Renumber fix:** the Session tab rescans its folder on each visit (one directory listing, needed for the right next
+  number) and checks up to 10 recent folders exist; the volume slider re-renders the sounds at most once per 10 % step. All cheap.
+- **Tab views:** every switch rebuilds the page's view. Caching the views was tried and measured, with no gain. A switch takes about
+  20 ms once the cost of the UI Automation lookup used for timing (about 85 ms for Settings) is subtracted. Removed again rather than
+  kept for nothing.
+- **Start session out of view:** with many recent folders, the button scrolled below the window. It now sits in an action bar pinned
+  under the scrolling page, with the start error above it. That's the usual pattern for a page's primary action, as in Windows
+  Settings and installers. A headless test at the minimum window size with 10 recent folders checks it stays visible; it fails with
+  the old layout (button at y=966 in a 560 px window).
+- **Telling the bar apart:** it first used the card surface, so it read as one more card cut off by the window. It now has its own
+  surface and an upward shadow drawn over the scrolling page: light `#E6E9F1` with a `#CDD2DE` top edge (darker than the page, unlike the white cards; first tried at `#EDEFF5`, which was too subtle),
+  dark `#262A36` (raised surfaces are lighter in dark mode) with a lighter top edge `#3A3F4E`, since shadows barely show on dark
+  backgrounds. The two themes were balanced in perceived lightness (CIELAB L*): bar vs cards 7.7 (light) and 5.0 (dark), edge line vs
+  bar 8.2 and 9.6. A first dark edge (`#424858`, 13.5) stood out noticeably more than light mode's. The muted text on it keeps AA contrast (about 6.5:1 or better). Before and after were compared in captures of both
+  themes.
+- **Default window size re-checked after these changes:** kept at 900×860. Captures of every tab show a first launch (0–1 recent
+  folders) fits the Session tab with room to spare. With 8 recent folders, only the bottom of section 3 needs a short scroll, and
+  Start session stays in view in the pinned bar. Settings is a long page meant to scroll. Users with many folders get their remembered
+  size, and small screens are clamped to 95 % of the working area anyway (`WindowSizing`).
+- **Keyboard:** `Enter` already started a session (default button) and is kept. `Alt+S` (access key, underlined while Alt is held) is
+  added. No extra global shortcut: starting a session registers system-wide keys, so it should take a deliberate action in the
+  window.
+
+### Renumber tab: which folder, and staying current
+- Every route was checked. The Session tab's folder changing, a folder chosen on the Renumber tab, sessions adding or renaming files,
+  the summary's "Renumber these…", Apply/Undo/Reload, and edits made in another app all reach the list. SPEC §9 lists them.
+- **Two gaps closed:**
+  - Switching to the tab used to replace a folder chosen on the Renumber tab with the Session tab's folder. It now follows the Session
+    tab only when that folder changed since the last visit. This predates v1.0.0.
+  - Coming back to the window after editing files elsewhere didn't refresh a shown list. Window activation now runs the same check as
+    a tab switch: one directory listing, and a rebuild only if the screenshots changed.
+- **Not watched, deliberately:** changes made while the app stays in front (e.g. another program writing files without the user
+  switching). A file-system watcher would cost resources for a rare case that **Reload** already covers.
+
+### Collision prompt: arrow keys
+- The four choices took Tab but not arrow keys. Up/Down now move between them (Avalonia 12's `XYFocus.NavigationModes="Keyboard"`),
+  and Enter picks the highlighted choice. It opens on Append, shown with a keyboard-focus highlight, so Enter straight away still
+  appends, as before.
+- **Risk considered:** a stray arrow press plus Enter could pick Overwrite. That sends the old file to the Recycle Bin, so it's
+  recoverable, and the highlight shows which choice Enter will take. Arrow keys between dialog choices are also standard on Windows.
+  Focus doesn't wrap at the ends, like standard Windows dialogs.
+
+### Renumber tab: kept between visits, rows built only when in view
+- **Symptom:** switching to the tab with a large folder lagged, then the list popped in, and it did so on every switch, not just the
+  first.
+- **Cause, measured with 800 files:** every switch re-opened the folder, rescanned it and rebuilt every row view-model (dropping any
+  ticks), and the list built every row's controls (about six each), visible or not. Opening a different folder also scanned it twice.
+- **Fix:** re-opening the folder already shown keeps the list and its ticks, and rebuilds only if a directory listing shows the
+  screenshots changed (ticks are carried over). The list uses a `VirtualizingStackPanel`, so only the rows in view are built.
+  `Open` loads a newly chosen folder once.
+- **Result:** 1,426 ms → about 190 ms for the first switch and 830–1,100 ms → about 55 ms for each later one (UI Automation timing,
+  800 files). Tests cover the reuse, the carried-over ticks and the row count; the row-count test fails without the virtualising
+  panel (802 rows built).
+
+### Exe name: "Screenshot Helper"
+- Taskbar pins, Task Manager and Windows' notification-area settings show the exe's file description, which defaulted to the
+  assembly name `ScreenshotHelper`. `AssemblyName` and `AssemblyTitle` are now "Screenshot Helper", so the exe is
+  `Screenshot Helper.exe` and every Windows surface shows the spaced name.
+- Kept unspaced, deliberately:
+  - namespaces and project names (identifiers can't contain spaces);
+  - `%APPDATA%\ScreenshotHelper` and `%LOCALAPPDATA%\ScreenshotHelper` (renaming them would orphan existing settings and logs);
+  - the single-instance object names and `SCREENSHOTHELPER_HOME`;
+  - release asset names (`ScreenshotHelper-<version>-<rid>.exe`/`.zip`), because GitHub turns spaces in asset names into dots. The
+    zip contains `Screenshot Helper.exe`.
+- **Hurdle:** the tray built its icons from a hard-coded `avares://ScreenshotHelper/...`, so the renamed app crashed at start-up while
+  every test passed (no test constructs the tray). Avalonia's own compiled XAML already used `avares://Screenshot Helper/...`, so
+  spaces work there. The URI is now built from the assembly name, and a headless test checks that it resolves; it fails against the
+  old string.
+
+### Launch time: ReadyToRun
+- Measured with `tools/Measure-Startup.ps1` (warm medians, x64, 1080p). The v1.0.0 release exe took about 1.44 s to a usable window.
+  Debug and Release builds took the same (about 1.38 s), so JIT-compiling our own code isn't the cost.
+- A temporary phase trace (removed afterwards) put about 430 ms in Avalonia's platform and theme setup, about 170 ms in building the
+  main window, and about 330 ms from `Show` to the first frame: mostly JIT-compiling Avalonia itself. ReadyToRun precompiles it.
+
+  | Publish options | exe size | usable after |
+  |---|---|---|
+  | single-file, compressed (v1.0.0) | 48 MB | ~1440 ms |
+  | **+ ReadyToRun (chosen)** | 64 MB | ~850 ms |
+  | ReadyToRun, uncompressed | 145 MB | ~610 ms |
+  | uncompressed, no ReadyToRun | 101 MB | ~1370 ms |
+
+- Chosen: ReadyToRun with compression, 41 % faster for 16 MB more. Dropping compression would save another ~240 ms per launch (the
+  bundle is decompressed each time) but more than double the download, so it was rejected for now. ARM64 precompiles fine on the x64
+  runner.
+- Native AOT would start faster still, but needs trimming-safety work across System.Drawing, COM interop and reflection. Not pursued.
+- `dotnet run` and `bin\Debug` builds aren't precompiled; the README points everyday use at a published exe.
+
+### Windows appear only once drawn, then fade in
+- **Launch flicker, filmed with `tools/Record-Frames.ps1`:** for about 100 ms the main window was on screen as an empty, see-through
+  frame (title bar and border drawn, the content area showing whatever was behind) during DWM's open animation, before Avalonia's first
+  frame. A re-shown window can likewise show its stale last frame for a moment.
+- **Fix:** `WindowReveal.ShowWhenDrawn` shows a window cloaked and reveals it after two rendered frames. `DWMWA_CLOAK` keeps the window
+  alive and focusable but not composed ([DWMWINDOWATTRIBUTE](https://learn.microsoft.com/en-us/windows/win32/api/dwmapi/ne-dwmapi-dwmwindowattribute)).
+  A 500 ms fallback reveals the window regardless, so it can never stay invisible.
+  - Used for the main window (launch, after a session, the tray's Show), the caption box, the collision prompt and the toast.
+  - The caption box is activated while still cloaked, so keys typed straight after `c` land in it. `tools/Check-SessionWindows.ps1`
+    verifies this.
+- **Keeping a fade:** the first version simply uncloaked, so windows popped in. That also lost Windows' own open animation, which plays
+  when a window is first shown (here, while still cloaked).
+  - **Tried and filmed:** hiding the drawn window, uncloaking and showing it again, with and without `DwmFlush` and a pause in
+    between. DWM doesn't replay its animation that way; the window still popped in.
+  - **Chosen:** layered-window opacity ([`SetLayeredWindowAttributes`](https://learn.microsoft.com/en-us/windows/win32/api/winuser/nf-winuser-setlayeredwindowattributes)).
+    The drawn window is uncloaked at opacity 0 and faded to 255 over 180 ms with an ease-out curve, close to Windows' own animation.
+    Then the layered style is removed again (the toast keeps it for click-through).
+  - Layered opacity covers the whole window, title bar included, and the window stays visible to Windows throughout, so focus taken
+    while cloaked is kept. Filmed: the fully drawn window blends in over about 165 ms. The time to a usable window is unchanged.
+- **Why not just the standard show:** filmed on the precompiled build with a plain `Show()` (dark and light theme), DWM zooms in an
+  empty, see-through window (title bar and frame over whatever is behind) and the content appears 80–100 ms later. A classic Win32 app
+  paints its background colour the moment it's shown, so DWM animates a solid window. Avalonia draws only through its composition
+  surface, which is empty until the first frame, and Windows can't fill it. No bright frame appeared in dark theme in any variant.
+  Cloaking until drawn and then fading is therefore the closest match to standard behaviour available here; what it lacks is DWM's
+  slight zoom. Minimize, restore, close and the theme switch are left entirely to Windows.
+- **Theme switch, filmed both ways:** the page changes in one frame, and the native title bar fades over about 230 ms. That fade is
+  Windows' own caption-colour animation, with no blank frame or jump, so it's left as it is.
+
+### Toast: fixed size, and "Paused" stays up
+- **Symptom:** toasts sometimes didn't appear for main/sub shots, and came back after other keys or the next session. Pause and resume
+  had been used a lot at the time.
+- **Pause:** pausing unregisters the capture keys by design, so a session paused without noticing looks exactly like that (no shot, no
+  sound, no toast) until the next pause/resume. The "Paused" toast now stays on screen until the session resumes or ends, and a message
+  shown meanwhile (e.g. undo from the tray) times out back to it.
+- **Placement:** the toast window used to be sized to each message, shown, and then moved into its corner once its size was known. The
+  window is now a fixed-size (460×200), see-through, click-through, capture-excluded area placed from the screen's working area alone,
+  before it appears. The visible card inside still fits each message and sits in the area's corner, so a message of a different length
+  can't shift it or push it past the corner. The empty part of the area is invisible, lets clicks through and never appears in
+  screenshots, so it takes no usable screen space.
+- **Layered window:** `SetLayeredWindowAttributes` is now called after `WS_EX_LAYERED` (needed for click-through) is added, since a
+  layered window's appearance isn't defined until it is
+  ([layered windows](https://learn.microsoft.com/en-us/windows/win32/winmsg/window-features#layered-windows)).
+  `tools/toast-visibility-spike.cs` showed the old styles 60 times out of 60 without a miss, so this is defensive, not a confirmed cause.
+- **Root cause found afterwards:** toasts went missing while the taskbar was focused and came back once
+  another window was. With the taskbar set to **auto-hide**, Windows counts the taskbar's strip as working area, so the toast
+  sat in that strip. Whenever the taskbar slid out (focused, or the mouse at the bottom), the taskbar covered it from above in the
+  window stack. Both checks that missed it looked only at the toast's own state (visible, inside the working area).
+  - **Fix:** the toast's corner is pulled in by the thickness of any auto-hide app bar on that edge of that monitor
+    ([`ABM_GETAUTOHIDEBAREX`](https://learn.microsoft.com/en-us/windows/win32/shell/abm-getautohidebarex)). A hidden bar keeps its
+    size, so its window size gives the distance.
+  - **All edges and sizes:** Windows 10 allows the taskbar on any edge, several rows thick, and on every monitor. Current Windows 11
+    builds keep it at the bottom, but its height varies, and other programs can dock auto-hide bars too. All four edges of the
+    toast's monitor are queried and each bar's real thickness is used, for every corner setting. Only the bottom case can be tried live
+    here (Windows 11), so the placement is a pure function tested for bars on each edge, a taller taskbar and no bar. Those tests fail
+    with the bar distances ignored.
+  - **Second bug found the same way:** Avalonia rewrites a window's extended styles each time it's shown, so from the second toast on
+    it was no longer click-through or non-activating (`WS_EX_TRANSPARENT`/`WS_EX_NOACTIVATE` gone; capture exclusion survived). This
+    was already in v1.0.0, which applied the styles once. They're now applied on every show.
+  - `tools/Check-SessionWindows.ps1` now also requires the toast to be click-through, capture-excluded and covered by no window, on
+    every event and with the taskbar focused (Win+T). Run against the previous build, it fails on both bugs.
+
+### Settings missing from the file loaded as false/0
+- With .NET 10's source-generated System.Text.Json, an `init` property missing from the JSON gets its type's default instead of its
+  initializer ([dotnet/runtime#84484](https://github.com/dotnet/runtime/issues/84484), fixed in .NET 11). A partial `settings.json`
+  therefore loaded toasts, sounds and "open the folder" as off, and the volume as 0.
+- **Found** when the session check's scratch settings switched toasts off. The app always writes the file in full, so v1.0.0 users
+  weren't affected. But any setting added in a later version would have loaded as off or 0 for them after an update.
+- **Fix:** `SettingsStore` lays the file's keys over the serialised defaults before deserialising. A file that isn't a JSON object is
+  quarantined like corrupt JSON. Tests cover both, and the first fails without the fix.
+
+### Long paths
+- The folder boxes show the full path as a tooltip, since a long path scrolls out of view.
+- Recent-folder links use `PathSegmentEllipsis`, which keeps the drive and the last folder visible, with the full path as a tooltip.
+  The tooltip also shows on missing (disabled) entries.
+
 ## 2026-09-29 (UTC)
 
 ### First public release: v1.0.0
@@ -21,7 +218,7 @@ change is recorded as a new entry rather than by rewriting an old one. Current b
 
 ## 2026-09-28 (UTC)
 
-### Audit fixes
+### Fixes from a code review
 - **Log writes moved off the calling thread.** `AppLog` queues lines on a `Channel` and one background writer batches them into the day's
   file, grouped by UTC day, with a disk flush per batch. Before, every line did a synchronous append under a lock, from the session
   actor and the UI thread alike. `Flush(timeout)` drains the queue; `Dispose` (via `using` in `Program`) and the unhandled-exception
@@ -61,9 +258,9 @@ change is recorded as a new entry rather than by rewriting an old one. Current b
 
 ## 2026-09-27 (UTC)
 
-### Round 4: annotation target, clean window captures, caption box, docs layout
+### Annotation target, clean window captures, caption box, docs layout
 - **Timestamp/caption now annotate the shot just taken by default (setting: "Timestamp and caption keys apply to").**
-  - Problem (owner): arming a caption *before* capturing makes the user type first while the moment passes. Capturing on the
+  - Problem: arming a caption *before* capturing makes the user type first while the moment passes. Capturing on the
     caption key instead would be wrong: only the main/sub keys may ever capture, or an unintended screenshot is taken.
   - Decision: capture first, label after. `t`/`c` rename the last shot of the session (add/remove the capture-time timestamp; add/edit/remove
     the caption). One setting governs both keys so they never behave differently; "next shot" remains available for users who prefer
@@ -71,8 +268,8 @@ change is recorded as a new entry rather than by rewriting an old one. Current b
     only-main/sub-capture rule).
   - Safety: the engine records the exact timestamp/caption text it wrote for each shot and only rewrites a tail that still matches, so a
     shot renamed outside the app is never overwritten. The caption budget for the last shot reserves room for a timestamp added later.
-  - Default changed from the original scripts' "arm next shot" behaviour; the owner's old `t` habit still works by switching the setting.
-- **Edge noise in window screenshots (found by the owner on README images):** Windows 11 windows have 8-px rounded corners and a
+  - Default changed from the original scripts' "arm next shot" behaviour; the scripts' old `t` behaviour is still available by switching the setting.
+- **Edge noise in window screenshots (found on README images):** Windows 11 windows have 8-px rounded corners and a
   semi-transparent 1-px border, so any capture of the window rectangle bakes in whatever is behind it (26 distinct colours along one
   README image's frame; the corners showed the editor behind).
   - Fix: difference matting. Capture over a white and then a black backdrop placed directly behind the window (`SetWindowPos` insert-after,
@@ -103,8 +300,8 @@ change is recorded as a new entry rather than by rewriting an old one. Current b
     and Linux, so views, view-models and Core run unchanged; WPF's UI layer is Windows-only. No UI framework covers the OS services this
     app needs (global hotkeys, capture, Recycle Bin, reveal, focus, capture-exclusion), which is why they sit behind Core interfaces.
 
-### Round 3: fixes and audit answers
-- **Stray Explorer windows (bug, found by the owner):** the platform test `Revealer_tolerates_missing_files` passed a non-existent folder, and `explorer.exe "<missing path>"` silently opens its default location (Documents). Every test run leaked one window.
+### Fixes and review findings
+- **Stray Explorer windows (bug):** the platform test `Revealer_tolerates_missing_files` passed a non-existent folder, and `explorer.exe "<missing path>"` silently opens its default location (Documents). Every test run leaked one window.
   - The revealer now opens nothing for a missing folder, and only selects files that exist inside the folder.
   - The decision is a pure function (`FilesToReveal`) tested without launching Explorer.
   - Rule adopted: tests must never launch visible external processes.
@@ -131,7 +328,7 @@ change is recorded as a new entry rather than by rewriting an old one. Current b
 - **Key guide** is now wrapping key-cap chips instead of one dot-separated line.
 - **Release workflow guarded:** it runs only when the repository is public, so tags pushed to a private copy or fork never create a release. `build/Publish.ps1` only builds files into `artifacts/` locally; it publishes nothing.
 
-### v1 implemented (owner: "go ahead with the dev", plus dark mode and an app icon)
+### v1 implemented (plus dark mode and an app icon)
 - **Solution:** `Core` (net10.0), `Platform.Windows`, `App` (Avalonia 12.1.3 + CommunityToolkit.Mvvm 8.4.2), one xUnit v3 test project each.
   154 tests pass (Core 110, Platform 20 + 1 opt-in, App 24).
 - **Dependency pins:**
@@ -199,7 +396,7 @@ change is recorded as a new entry rather than by rewriting an old one. Current b
 
 ## 2026-09-26 (UTC)
 
-### Decisions (owner, round 2) → spec accepted
+### Design decisions and the spec
 The functional spec is [`docs/SPEC.md`](SPEC.md) (renamed from `docs/spec.md`). It replaces the earlier `docs/design-proposal.md`, which was deleted as superseded.
 - **D1 Stack:** C# / .NET 10 LTS + Avalonia 12.
 - **D5 Platform:** Windows-only v1. `Core` targets plain `net10.0` with no OS APIs and is tested on Linux CI to prove it is portable.
@@ -246,7 +443,7 @@ The functional spec is [`docs/SPEC.md`](SPEC.md) (renamed from `docs/spec.md`). 
    - `main-num` is initialised to the highest existing main, and `sub-num` to 1.
    - The first sub press therefore writes `{highest}-2.png` into the **existing** last group (skipping `-1`). `mss` overwrites without asking, so an existing `{highest}-2.png` is **silently destroyed**.
    - It then tries to rename `latest-main-screenshot-filepath` (still `''`), which fails and is swallowed.
-   - The owner remembered this as "starts from sub 0". The actual behaviour is sub 2 in the previous group, with data-loss risk.
+   - This is easily taken for "starts from sub 0", but the actual behaviour is sub 2 in the previous group, with data-loss risk.
 2. **Custom script, main key pressed first:** `main-num += 1` runs before saving, so the configured main `X` is skipped and the first shot is `X+1`. Starting with sub works, but `sub-num == 2` triggers the rename of an empty path (it fails silently).
 3. **Auto-detect regex `^(\d+)`** counts any PNG starting with digits (e.g. `20250101_123456.png` → main 20,250,101). Its sub numbers are never read.
 4. **Silent failures:** every capture and rename sits in `try/except: pass`. A failed save still looks like success, because the sound never plays and nothing else signals the error.

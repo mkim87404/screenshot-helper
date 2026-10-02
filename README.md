@@ -54,10 +54,10 @@ in any app, the shots land in the folder you chose, and when you finish, Explore
 - **Timestamps and captions** — capture first, label after: `t` stamps the shot you just took with the time it was captured (local time with UTC offset, or UTC) and `c` opens a caption box for it that won't accept more characters than fit in a valid Windows path. Prefer to set them up before capturing? One setting switches both keys to "next shot". Either way, the timestamp is always the moment the shot was taken, however often you toggle it.
   <br/>`5-2 (2026-09-27 10.05.33 UTC+13) (login page).png`
 - **Never loses or overwrites data** — every file is written to a temp file and renamed atomically without overwriting; renames only ever change the numbers, never the rest of the name; "overwrite" and "undo" use the Recycle Bin.
-- **Collision handling** — a taken main number is skipped automatically; a taken sub number asks whether to append, insert (shifting later shots), overwrite or discard — the shot is already captured, so the prompt is never in it.
+- **Collision handling** — a taken main number is skipped automatically; a taken sub number asks whether to append, insert (shifting later shots), overwrite or discard (`↑`/`↓` and `Enter` to choose, `Esc` to discard) — the shot is already captured, so the prompt is never in it.
 - **Renumber tool** — shift, close gaps, move to another group or tidy up solo shots across any selection, with a preview, a crash-safe journal and one-click undo.
 - **Undo last shot**, **pause** (so you can type normally), and a **tray icon** that shows the session state.
-- **Sound and on-screen feedback** for every action — the notification is excluded from screen capture, so it never shows up in your screenshots.
+- **Sound and on-screen feedback** for every action — the notification is excluded from screen capture, lets clicks pass through and stays clear of an auto-hiding taskbar, so it never shows up in your screenshots or gets in your way.
 - **Choose what to capture** — monitor under the mouse, primary monitor, all monitors or the active window (with clean, transparent rounded corners); optionally copy each shot to the clipboard too.
 - **Rebindable keys**, light/dark theme, and settings that are saved instantly.
 
@@ -68,17 +68,18 @@ in any app, the shots land in the folder you chose, and when you finish, Explore
 ## 📥 Download and run
 
 1. Download `ScreenshotHelper-<version>-win-x64.exe` (or `win-arm64` for ARM devices) from the [latest release](https://github.com/mkim87404/screenshot-helper/releases/latest).
-   A portable `.zip` with the same exe is also available.
+   A portable `.zip` with the same exe (named `Screenshot Helper.exe` inside) is also available.
 2. Run it — there's nothing to install and no .NET runtime needed. Settings are stored in `%APPDATA%\ScreenshotHelper`.
 
 **To update**, exit the app (tray icon → Exit), download the new release and replace the old exe with it. Your settings, keys and recent
-folders live in `%APPDATA%\ScreenshotHelper`, so they carry over.
+folders live in `%APPDATA%\ScreenshotHelper`, so they carry over. If you pinned the app to the taskbar or Start, pin the new exe
+again: the download's name includes the version, and since v1.1.0 the exe in the zip is `Screenshot Helper.exe` (was `ScreenshotHelper.exe`).
 
 > **Windows SmartScreen:** the app isn't code-signed, so the first launch may show *"Windows protected your PC"*.
 > Choose **More info → Run anyway**. You can verify a download first:
 > ```powershell
-> Get-FileHash .\ScreenshotHelper-1.0.0-win-x64.exe -Algorithm SHA256   # compare with SHA256SUMS.txt in the release
-> gh attestation verify .\ScreenshotHelper-1.0.0-win-x64.exe -R mkim87404/screenshot-helper   # proves it was built by this repo's CI
+> Get-FileHash .\ScreenshotHelper-1.1.0-win-x64.exe -Algorithm SHA256   # compare with SHA256SUMS.txt in the release
+> gh attestation verify .\ScreenshotHelper-1.1.0-win-x64.exe -R mkim87404/screenshot-helper   # proves it was built by this repo's CI
 > ```
 
 **Requirements:** Windows 10 version 2004 or later, or Windows 11 (x64 or ARM64).
@@ -87,8 +88,11 @@ folders live in `%APPDATA%\ScreenshotHelper`, so they carry over.
 
 1. **Choose a folder** on the **Session** tab. The app shows the highest numbered screenshot already there.
 2. **Choose where numbering starts** — *Start a new group* (next free number by default) or *Continue an existing group*.
-3. **Start session.** The window hides; use the keys below anywhere.
+3. **Start session** (the button stays at the bottom of the tab; `Enter` or `Alt+S` work too). The window hides; use the keys below anywhere.
 4. **End the session** (`Ctrl+Shift+Q`). Explorer opens with this session's screenshots selected, and the app shows a summary.
+
+Only one copy of the app runs. Launching it again brings its window forward, or, during a session (while the window is hidden), shows
+a reminder that a session is running.
 
 | Key | Action |
 | --- | --- |
@@ -96,7 +100,7 @@ folders live in `%APPDATA%\ScreenshotHelper`, so they carry over.
 | `-` | Sub shot — adds to the group (`4-1`, `4-2`, …) |
 | `t` | Add the capture time to the shot just taken (press again to remove it) |
 | `c` | Caption the shot just taken (edit or clear an existing caption) |
-| `Ctrl+Shift+Space` | Pause / resume — while paused, the keys above type normally |
+| `Ctrl+Shift+Space` | Pause / resume — while paused, the keys above type normally and a *Paused* notification stays on screen |
 | `Ctrl+Shift+Z` | Undo the last shot (it goes to the Recycle Bin) |
 | `Ctrl+Shift+Q` | End the session |
 
@@ -113,7 +117,9 @@ can also be switched to apply to the *next* shot instead.
 ```
 
 **Renumber** fixes numbering afterwards: select files (or whole groups), pick an operation, check the preview, apply. Only the numbers
-change, so timestamps, captions and anything else you added to a name are always kept.
+change, so timestamps, captions and anything else you added to a name are always kept. The tab keeps its folder and your selection
+when you switch away, and refreshes its list when you come back to it or to the app; if files change while the app stays in front,
+press **Reload**.
 
 ## ⚙️ Settings
 
@@ -141,9 +147,12 @@ Requirements: [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) (
 git clone https://github.com/mkim87404/screenshot-helper.git
 cd screenshot-helper
 pwsh build/Build.ps1                              # restore, build and run all tests
-dotnet run --project src/ScreenshotHelper.App     # run the app
+dotnet run --project src/ScreenshotHelper.App     # run a development build
 pwsh build/Publish.ps1                            # single-file exes + zips + checksums in artifacts/
 ```
+
+For everyday use, run an exe from `artifacts/` (or a release): those are precompiled (ReadyToRun) and start in well under a second,
+while development builds compile on every launch and take about 60 % longer.
 
 Set `SCREENSHOTHELPER_HOME` to a folder to keep settings, logs and journals there instead of your profile (handy for testing).
 
@@ -167,7 +176,7 @@ src/
   ScreenshotHelper.App/                Avalonia 12 MVVM app: views, view-models, tray, toast, session coordinator
 tests/                                 One test project per source project (xUnit v3)
 build/                                 PowerShell build and publish scripts (used by CI)
-tools/                                 Icon generator, window capture and README screenshot scripts — see tools/README.md
+tools/                                 Icon generator, window capture, README screenshots, start-up timing and UI checks — see tools/README.md
 docs/SPEC.md                           Functional specification (current behaviour)
 docs/DECISIONS.md                      Decision log: decisions, findings and trade-offs, newest first
 .github/workflows/                     CI and tag-triggered releases
@@ -175,17 +184,15 @@ docs/DECISIONS.md                      Decision log: decisions, findings and tra
 
 ## 🧠 Design notes
 
-- **Exclusive hotkeys, not a keyboard hook.** `RegisterHotKey` only delivers the app's own chords, can't be silently dropped by
-  Windows the way a slow low-level hook can, and keeps keys from leaking into the app being captured.
-- **One actor owns the session.** Hotkeys enqueue commands into a channel with a single consumer, so rapid presses are processed in
-  order and no state is shared between threads.
-- **Clean window captures.** Windows 11 windows have rounded corners and a translucent border, so a plain capture bakes in whatever
-  was behind them. Active-window shots are taken over a white and then a black backdrop placed directly behind the window, and the
-  edge's true transparency is recovered from the difference.
-- **Crash-safe files.** Shots are written to a hidden temp file, flushed, then renamed with no-overwrite; bulk renames are recorded
-  in a write-ahead journal so an interrupted run can be finished or rolled back on the next start.
-- **Portable core.** Everything except the Win32 layer and the UI targets plain `net10.0` and is tested on Linux, so porting means
-  writing one new platform project.
+- **Exclusive hotkeys, not a keyboard hook:** the session keys are registered with `RegisterHotKey` while a session runs.
+- **One actor owns the session:** key presses become commands in a single-consumer channel, processed in order.
+- **Clean window captures:** active-window shots are taken over a white and then a black backdrop, so the rounded corners and
+  translucent border come out truly transparent.
+- **Crash-safe files:** shots are written to a hidden temp file, flushed, then renamed without overwriting; bulk renames go through a
+  write-ahead journal that can be finished or rolled back on the next start.
+- **Fast, clean start:** release builds are precompiled (ReadyToRun), and each window is revealed, with a short fade, only once it's
+  drawn.
+- **Portable core:** everything except the Win32 layer and the UI targets plain `net10.0` and is tested on Linux.
 
 The behaviour is specified in [docs/SPEC.md](docs/SPEC.md); the reasoning behind each decision is in [docs/DECISIONS.md](docs/DECISIONS.md).
 

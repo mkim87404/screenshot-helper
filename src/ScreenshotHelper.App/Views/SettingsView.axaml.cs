@@ -33,6 +33,20 @@ public partial class SettingsView : UserControl
         base.OnDetachedFromVisualTree(e);
     }
 
+    private void OnPreviewKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (DataContext is not SettingsViewModel { IsCapturing: true } vm)
+        {
+            return;
+        }
+
+        e.Handled = true;
+        if (ToChord(e.PhysicalKey, e.KeyModifiers) is { } chord)
+        {
+            vm.TryCapture(chord);
+        }
+    }
+
     /// <summary>Converts an Avalonia key event into a chord; null for lone modifier keys (still waiting for the real key).</summary>
     internal static KeyChord? ToChord(PhysicalKey key, Avalonia.Input.KeyModifiers modifiers)
     {
@@ -71,19 +85,5 @@ public partial class SettingsView : UserControl
         }
 
         return new KeyChord(mods, code);
-    }
-
-    private void OnPreviewKeyDown(object? sender, KeyEventArgs e)
-    {
-        if (DataContext is not SettingsViewModel { IsCapturing: true } vm)
-        {
-            return;
-        }
-
-        e.Handled = true;
-        if (ToChord(e.PhysicalKey, e.KeyModifiers) is { } chord)
-        {
-            vm.TryCapture(chord);
-        }
     }
 }

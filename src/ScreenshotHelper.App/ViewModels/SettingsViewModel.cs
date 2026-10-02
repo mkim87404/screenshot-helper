@@ -190,6 +190,26 @@ public sealed partial class SettingsViewModel : ObservableObject
         return true;
     }
 
+    internal void SetMuted(FeedbackKind kind, bool muted)
+    {
+        if (_loading)
+        {
+            return;
+        }
+
+        var set = new HashSet<FeedbackKind>(_services.Settings.MutedSounds);
+        if (muted)
+        {
+            set.Add(kind);
+        }
+        else
+        {
+            set.Remove(kind);
+        }
+
+        Save(_services.Settings with { MutedSounds = [.. set.Order()] });
+    }
+
     [RelayCommand]
     private void ResetHotkeys()
     {
@@ -215,26 +235,6 @@ public sealed partial class SettingsViewModel : ObservableObject
 
     [RelayCommand]
     private void PreviewSound(FeedbackKind kind) => _services.Platform.Sound.Play(_services.Sounds[kind]);
-
-    internal void SetMuted(FeedbackKind kind, bool muted)
-    {
-        if (_loading)
-        {
-            return;
-        }
-
-        var set = new HashSet<FeedbackKind>(_services.Settings.MutedSounds);
-        if (muted)
-        {
-            set.Add(kind);
-        }
-        else
-        {
-            set.Remove(kind);
-        }
-
-        Save(_services.Settings with { MutedSounds = [.. set.Order()] });
-    }
 
     partial void OnAlwaysTimestampChanged(bool value) => Save(s => s with { AlwaysTimestamp = value });
     partial void OnSelectedTimestampZoneChanged(Choice<TimestampZone>? value) => Save(s => value is null ? s : s with { TimestampZone = value.Value });

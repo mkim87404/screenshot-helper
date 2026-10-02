@@ -1,4 +1,5 @@
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using ScreenshotHelper.App.ViewModels;
 using ScreenshotHelper.Core.Session;
@@ -11,7 +12,8 @@ public partial class CollisionPromptWindow : Window
     public CollisionPromptWindow()
     {
         InitializeComponent();
-        Opened += (_, _) => AppendButton.Focus();
+        // Focused as if by keyboard, so the highlight is visible from the start and arrow keys move it.
+        Opened += (_, _) => AppendButton.Focus(NavigationMethod.Directional);
     }
 
     public SubCollisionAnswer Answer { get; private set; } = new(SubCollisionChoice.Discard, false);

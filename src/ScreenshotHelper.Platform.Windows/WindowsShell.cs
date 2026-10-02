@@ -71,24 +71,6 @@ public sealed class WindowsFileRevealer(AppLog log) : IFileRevealer
         thread.Start();
     }
 
-    /// <summary>
-    /// What to show: the files that still exist inside <paramref name="folder"/> (empty = just open the folder), or null when the
-    /// folder itself is gone and nothing should be opened.
-    /// </summary>
-    internal static List<string>? FilesToReveal(string folder, IReadOnlyList<string> files)
-    {
-        ArgumentNullException.ThrowIfNull(files);
-        if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
-        {
-            return null;
-        }
-
-        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder));
-        return files
-            .Where(f => File.Exists(f) && string.Equals(Path.GetDirectoryName(Path.GetFullPath(f)), root, StringComparison.OrdinalIgnoreCase))
-            .ToList();
-    }
-
     private void RevealOnStaThread(string folder, List<string> files)
     {
         try
@@ -159,5 +141,23 @@ public sealed class WindowsFileRevealer(AppLog log) : IFileRevealer
                 ILFree(folderPidl);
             }
         }
+    }
+
+    /// <summary>
+    /// What to show: the files that still exist inside <paramref name="folder"/> (empty = just open the folder), or null when the
+    /// folder itself is gone and nothing should be opened.
+    /// </summary>
+    internal static List<string>? FilesToReveal(string folder, IReadOnlyList<string> files)
+    {
+        ArgumentNullException.ThrowIfNull(files);
+        if (string.IsNullOrWhiteSpace(folder) || !Directory.Exists(folder))
+        {
+            return null;
+        }
+
+        var root = Path.TrimEndingDirectorySeparator(Path.GetFullPath(folder));
+        return files
+            .Where(f => File.Exists(f) && string.Equals(Path.GetDirectoryName(Path.GetFullPath(f)), root, StringComparison.OrdinalIgnoreCase))
+            .ToList();
     }
 }

@@ -60,6 +60,7 @@ public sealed class AvaloniaSessionUi : ISessionUi, IDisposable
     public void SessionEnded(SessionSummary summary)
     {
         ArgumentNullException.ThrowIfNull(summary);
+        _toast.ClearPaused();
         var settings = _services.Settings;
         // Nothing saved → nothing to show; don't pop Explorer open for an empty session.
         if (settings.OpenFolderOnSessionEnd && summary.Files.Count > 0)
@@ -74,7 +75,7 @@ public sealed class AvaloniaSessionUi : ISessionUi, IDisposable
         }
 
         _viewModel?.ShowSummary(summary);
-        _mainWindow.Show();
+        WindowReveal.ShowWhenDrawn(_mainWindow);
         if (_mainWindow.WindowState == WindowState.Minimized)
         {
             _mainWindow.WindowState = WindowState.Normal;
@@ -111,7 +112,9 @@ public sealed class AvaloniaSessionUi : ISessionUi, IDisposable
             closed.TrySetResult();
         };
         window.Topmost = true;
-        window.Show();
+
+        // Focus is taken at once (keys typed straight after the hotkey must land in the box), while the window is still cloaked.
+        WindowReveal.ShowWhenDrawn(window);
         window.Activate();
         WindowsDesktop.BringToFront(window.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero);
         await closed.Task.ConfigureAwait(true);

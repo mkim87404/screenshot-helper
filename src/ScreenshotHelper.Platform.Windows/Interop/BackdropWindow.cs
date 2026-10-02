@@ -47,6 +47,9 @@ internal sealed class BackdropWindow : IDisposable
         }
     }
 
+    /// <summary>The native window (a hidden top-level popup until shown); tests use it as a real window to exercise Win32 helpers.</summary>
+    internal IntPtr Handle => _hwnd;
+
     /// <summary>Shows the backdrop over <paramref name="bounds"/>, directly below <paramref name="target"/> in z-order, and waits until it's on screen.</summary>
     public void ShowBehind(IntPtr target, System.Drawing.Rectangle bounds, bool white)
     {
